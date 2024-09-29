@@ -32,6 +32,14 @@ class Field : public IField {
  public:
   Field(T& value) : value(value) {}
 
+  int packField(Buffer& buffer, int offset) {
+    return packFieldHelper(value, buffer, offset);
+  }
+
+  int unpackField(Buffer& buffer, int offset) {
+    return unpackFieldHelper(value, buffer, offset);
+  }
+
  protected:
   template <std::unsigned_integral U>
   int packFieldHelper(U& value, Buffer& buffer, int offset) {
@@ -64,21 +72,49 @@ class Field : public IField {
     return value.unpackField(buffer, offset);
   }
 
-  int packField(Buffer& buffer, int offset) {
-    return packFieldHelper(value, buffer, offset);
-  }
-
-  int unpackField(Buffer& buffer, int offset) {
-    return unpackFieldHelper(value, buffer, offset);
-  }
-
  private:
   T& value;
 };
 
+template <std::unsigned_integral T>
+class Array : public IField {
+ public:
+  Array(std::vector<T>& values, uint32_t& lengthRef)
+      : values(values), IField(lengthRef) {}
+
+ protected:
+  int packField(Buffer& buffer, int offset) {
+    int startOffset = offset;
+    for (T& value : values) {
+      offset += Field<T>(value).packField(buffer, offset);
+    }
+
+    lengthRef = values.size();
+
+    return offset - startOffset;
+  }
+
+  int unpackField(Buffer& buffer, int offset) {
+    int startOffset = offset;
+
+    values.clear();
+    for (int i = 0; i < lengthRef; i++) {
+      T value;
+      offset += Field<T>(value).unpackField(buffer, offset);
+      values.push_back(value);
+    }
+
+    return offset - startOffset;
+  }
+
+ private:
+  std::vector<T>& values;
+};
+
+// The inheritance and constructor are probably bad ideas
 class Packet : public Field<Packet> {
  public:
-  Packet() : Field(*this) {};
+  Packet() : Field<Packet>(*this) {};
 
   int packField(Buffer& buffer, int offset);
   int unpackField(Buffer& buffer, int offset);
@@ -87,8 +123,13 @@ class Packet : public Field<Packet> {
 
  protected:
   template <FieldType T>
-  void bind(T& value) {
+  void field(T& value) {
     fields.push_back(std::make_unique<Field<T>>(value));
+  }
+
+  template <FieldType T>
+  void array(std::vector<T>& values, uint32_t& lengthRef) {
+    fields.push_back(std::make_unique<Array<T>>(values, lengthRef));
   }
 
   void uint32Length() {
