@@ -12,22 +12,14 @@ int Packet::unpack(Buffer& buffer) {
 
 int Packet::packField(Buffer& buffer, int offset) {
   int startOffset = offset;
-  std::vector<int> lengthIndices;
-
-  for (std::unique_ptr<IField>& field : fields) {
-    if (field->isLengthField)
-      lengthIndices.push_back(offset);
+  for (std::unique_ptr<IField>& field : fields)
     offset += field->packField(buffer, offset);
-  }
 
-  std::vector<int>::iterator it = lengthIndices.begin();
+  lengthRef = offset - startOffset;
 
-  for (std::unique_ptr<IField>& field : fields) {
-    if (field->isLengthField) {
-      field->setLength(offset - startOffset);
-      field->packField(buffer, *it++);
-    }
-  }
+  offset = startOffset;
+  for (std::unique_ptr<IField>& field : fields)
+    offset += field->packField(buffer, offset);
 
   return offset - startOffset;
 }

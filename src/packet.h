@@ -13,14 +13,15 @@ typedef std::vector<unsigned char> Buffer;
 // TODO: Make this less cursed
 class IField {
  public:
-  bool isLengthField;
-
-  IField(bool isLengthField = false) : isLengthField(isLengthField) {}
+  IField() : lengthRef(length) {}
+  IField(uint32_t& lengthRef) : lengthRef(lengthRef) {}
 
   virtual int packField(Buffer& buffer, int offset) = 0;
   virtual int unpackField(Buffer& buffer, int offset) = 0;
-  // The way setLength works is icky but it'll do for now
-  virtual void setLength(size_t length) {};
+
+ protected:
+  uint32_t length = 0;
+  uint32_t& lengthRef;
 };
 
 template <typename T>
@@ -29,8 +30,7 @@ concept FieldType = std::is_base_of_v<IField, T>;
 template <std::unsigned_integral T>
 class Uint : public IField {
  public:
-  Uint(T& value, bool isLengthField = false)
-      : value(value), IField(isLengthField) {}
+  Uint(T& value) : value(value) {}
 
   int packField(Buffer& buffer, int offset) {
     for (int i = 0; i < sizeof(T); i++) {
@@ -52,8 +52,6 @@ class Uint : public IField {
     }
     return sizeof(T);
   }
-
-  void setLength(size_t length) { value = length; }
 
  private:
   T& value;
@@ -96,23 +94,23 @@ class Packet : public IField {
   Buffer pack();
   int unpack(Buffer& buffer);
 
-  // TODO: Make private again
-  std::vector<std::unique_ptr<IField>> fields;
-
  protected:
-  // Add field that packs/unpacks a uint type
   template <std::unsigned_integral T>
-  void uint(T& value) {
+  void bind(T& value) {
     fields.push_back(std::make_unique<Uint<T>>(value));
   }
 
-  // Special length type that will be populated with packet length when packing
-  template <std::unsigned_integral T>
-  void uintLength(T& value) {
-    fields.push_back(std::make_unique<Uint<T>>(value, true));
+  template <FieldType T>
+  void bind() {
+    fields.push_back(std::make_unique<T>());
+  }
+
+  void uint32Length() {
+    fields.push_back(std::make_unique<Uint<uint32_t>>(lengthRef));
   }
 
  private:
+  std::vector<std::unique_ptr<IField>> fields;
 };
 
 #endif

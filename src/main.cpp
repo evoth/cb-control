@@ -4,12 +4,12 @@
 
 class TestPacket : public Packet {
  public:
-  uint32_t length = 0;
+  using Packet::length;
   uint32_t type = 0x07;
 
   TestPacket() {
-    uintLength(length);
-    uint(type);
+    uint32Length();
+    bind(type);
   }
 
   TestPacket(Buffer& buffer) : TestPacket() { unpack(buffer); }
@@ -19,9 +19,9 @@ class TestPacket2 : public Packet {
  public:
   uint32_t length = 0;
   TestPacket2() {
-    fields.push_back(std::make_unique<TestPacket>());
-    uintLength(length);
-    fields.push_back(std::make_unique<TestPacket>());
+    bind<TestPacket>();
+    uint32Length();
+    bind<TestPacket>();
   }
 
   TestPacket2(Buffer& buffer) : TestPacket2() { unpack(buffer); }
