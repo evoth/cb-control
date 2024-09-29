@@ -17,42 +17,34 @@ class TestPacket : public Packet {
 
 class TestPacket2 : public Packet {
  public:
-  uint32_t length = 0;
+  using Packet::length;
+  TestPacket p1;
+  TestPacket p2;
   TestPacket2() {
-    bind<TestPacket>();
+    bind<TestPacket>(p1);
     uint32Length();
-    bind<TestPacket>();
+    bind<TestPacket>(p2);
   }
 
   TestPacket2(Buffer& buffer) : TestPacket2() { unpack(buffer); }
 };
 
-// class TestPacket3 : public Packet {
-//  public:
-//   uint32_t length = 0;
-//   std::vector<std::unique_ptr<TestPacket>> tims;
-//   uint32_t timeLength = 2;
-//   TestPacket3() {
-//     fields.push_back(std::make_unique<TestPacket>());
-//     uintLength(length);
-//     fields.push_back(
-//         std::make_unique<Array<TestPacket, uint32_t>>(tims, timeLength));
-//   }
-
-//   TestPacket3(Buffer& buffer) : TestPacket3() { unpack(buffer); }
-// };
-
 int main() {
   TestPacket2 tim;
+  tim.p2.type = 0x05;
   Buffer buff = tim.pack();
   std::cout << std::endl;
   for (auto& e : buff) {
     std::cout << +e << std::endl;
   }
 
-  TestPacket newTim(buff);
+  TestPacket2 newTim;
+  newTim.unpack(buff);
   std::cout << std::endl
             << newTim.length << std::endl
-            << newTim.type << std::endl;
+            << newTim.p1.length << std::endl
+            << newTim.p2.length << std::endl
+            << newTim.p1.type << std::endl
+            << newTim.p2.type << std::endl;
   return 0;
 }

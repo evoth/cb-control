@@ -10,7 +10,6 @@
 
 typedef std::vector<unsigned char> Buffer;
 
-// TODO: Make this less cursed
 class IField {
  public:
   IField() : lengthRef(length) {}
@@ -25,88 +24,75 @@ class IField {
 };
 
 template <typename T>
-concept FieldType = std::is_base_of_v<IField, T>;
+concept FieldType = std::is_base_of_v<IField, T> || std::unsigned_integral<T>;
 
-template <std::unsigned_integral T>
-class Uint : public IField {
+// TODO: Restrict template
+template <typename T>
+class Field : public IField {
  public:
-  Uint(T& value) : value(value) {}
+  Field(T& value) : value(value) {}
 
-  int packField(Buffer& buffer, int offset) {
-    for (int i = 0; i < sizeof(T); i++) {
+ protected:
+  template <std::unsigned_integral U>
+  int packFieldHelper(U& value, Buffer& buffer, int offset) {
+    for (int i = 0; i < sizeof(U); i++) {
       const unsigned char byte = (value >> i * 8) & 0xFF;
       if (offset + i < buffer.size())
         buffer[offset + i] = byte;
       else
         buffer.push_back(byte);
     }
-    return sizeof(T);
+    return sizeof(U);
   }
 
-  int unpackField(Buffer& buffer, int offset) {
+  int packFieldHelper(IField& value, Buffer& buffer, int offset) {
+    return value.packField(buffer, offset);
+  }
+
+  template <std::unsigned_integral U>
+  int unpackFieldHelper(U& value, Buffer& buffer, int offset) {
     value = 0;
-    for (int i = 0; i < sizeof(T); i++) {
+    for (int i = 0; i < sizeof(U); i++) {
       // Current behavior will assume byte=0x00 if out of range
       if (offset + i < buffer.size())
         value |= (buffer[offset + i]) << i * 8;
     }
-    return sizeof(T);
+    return sizeof(U);
+  }
+
+  int unpackFieldHelper(IField& value, Buffer& buffer, int offset) {
+    return value.unpackField(buffer, offset);
+  }
+
+  int packField(Buffer& buffer, int offset) {
+    return packFieldHelper(value, buffer, offset);
+  }
+
+  int unpackField(Buffer& buffer, int offset) {
+    return unpackFieldHelper(value, buffer, offset);
   }
 
  private:
   T& value;
 };
 
-// template <FieldType T, std::unsigned_integral U>
-// class Array : public IField {
-//  public:
-//   Array(std::vector<std::unique_ptr<T>>& value, U& lengthValue)
-//       : value(value), lengthValue(lengthValue) {}
-
-//   int packField(Buffer& buffer, int offset) {
-//     int startOffset = offset;
-//     for (std::unique_ptr<T>& field : value) {
-//       offset += field->packField(buffer, offset);
-//     }
-//     // Set lengthValue and pack it? Oh no this is getting complicated
-//     return offset - startOffset;
-//   }
-
-//   int unpackField(Buffer& buffer, int offset) {
-//     int startOffset = offset;
-//     value.clear();
-//     for (int i = 0; i < lengthValue; i++) {
-//       value.push_back(std::make_unique<T>());
-//       offset += value.back()->unpackField(buffer, offset);
-//     }
-//     return offset - startOffset;
-//   }
-
-//  private:
-//   U& lengthValue;
-//   std::vector<std::unique_ptr<T>>& value;
-// };
-
-class Packet : public IField {
+class Packet : public Field<Packet> {
  public:
+  Packet() : Field(*this) {};
+
   int packField(Buffer& buffer, int offset);
   int unpackField(Buffer& buffer, int offset);
   Buffer pack();
   int unpack(Buffer& buffer);
 
  protected:
-  template <std::unsigned_integral T>
-  void bind(T& value) {
-    fields.push_back(std::make_unique<Uint<T>>(value));
-  }
-
   template <FieldType T>
-  void bind() {
-    fields.push_back(std::make_unique<T>());
+  void bind(T& value) {
+    fields.push_back(std::make_unique<Field<T>>(value));
   }
 
   void uint32Length() {
-    fields.push_back(std::make_unique<Uint<uint32_t>>(lengthRef));
+    fields.push_back(std::make_unique<Field<uint32_t>>(lengthRef));
   }
 
  private:
