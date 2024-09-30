@@ -26,8 +26,8 @@ int Packet::packField(Buffer& buffer, int offset) {
 
 int Packet::unpackField(Buffer& buffer, int offset) {
   int startOffset = offset;
-  for (std::unique_ptr<IField>& field : fields) {
+  for (std::unique_ptr<IField>& field : fields)
     offset += field->unpackField(buffer, offset);
-  }
+
   return offset - startOffset;
 }

@@ -1,6 +1,7 @@
 #ifndef CB_CONTROL_PACKET_H
 #define CB_CONTROL_PACKET_H
 
+#include <array>
 #include <concepts>
 #include <cstdint>
 #include <functional>
@@ -9,6 +10,7 @@
 #include <vector>
 
 typedef std::vector<unsigned char> Buffer;
+class Packet;
 
 class IField {
  public:
@@ -21,16 +23,14 @@ class IField {
  protected:
   uint32_t length = 0;
   uint32_t& lengthRef;
+  // static(?) getType()
 };
 
-template <typename T>
-concept FieldType = std::is_base_of_v<IField, T> || std::unsigned_integral<T>;
-
 // TODO: Restrict template
-template <typename T>
-class Field : public IField {
+template <std::unsigned_integral T>
+class Primitive : public IField {
  public:
-  Field(T& value) : value(value) {}
+  Primitive(T& value) : value(value) {}
 
   int packField(Buffer& buffer, int offset) {
     return packFieldHelper(value, buffer, offset);
@@ -53,10 +53,6 @@ class Field : public IField {
     return sizeof(U);
   }
 
-  int packFieldHelper(IField& value, Buffer& buffer, int offset) {
-    return value.packField(buffer, offset);
-  }
-
   template <std::unsigned_integral U>
   int unpackFieldHelper(U& value, Buffer& buffer, int offset) {
     value = 0;
@@ -68,26 +64,21 @@ class Field : public IField {
     return sizeof(U);
   }
 
-  int unpackFieldHelper(IField& value, Buffer& buffer, int offset) {
-    return value.unpackField(buffer, offset);
-  }
-
  private:
   T& value;
 };
 
 template <std::unsigned_integral T>
-class Array : public IField {
+class Vector : public IField {
  public:
-  Array(std::vector<T>& values, uint32_t& lengthRef)
+  Vector(std::vector<T>& values, uint32_t& lengthRef)
       : values(values), IField(lengthRef) {}
 
  protected:
   int packField(Buffer& buffer, int offset) {
     int startOffset = offset;
-    for (T& value : values) {
-      offset += Field<T>(value).packField(buffer, offset);
-    }
+    for (T& value : values)
+      offset += Primitive<T>(value).packField(buffer, offset);
 
     lengthRef = values.size();
 
@@ -96,11 +87,10 @@ class Array : public IField {
 
   int unpackField(Buffer& buffer, int offset) {
     int startOffset = offset;
-
     values.clear();
     for (int i = 0; i < lengthRef; i++) {
       T value;
-      offset += Field<T>(value).unpackField(buffer, offset);
+      offset += Primitive<T>(value).unpackField(buffer, offset);
       values.push_back(value);
     }
 
@@ -111,29 +101,99 @@ class Array : public IField {
   std::vector<T>& values;
 };
 
-// The inheritance and constructor are probably bad ideas
-class Packet : public Field<Packet> {
+template <std::unsigned_integral T, size_t N>
+class Array : public IField {
  public:
-  Packet() : Field<Packet>(*this) {};
+  Array(std::array<T, N>& values) : values(values) {}
 
+ protected:
+  int packField(Buffer& buffer, int offset) {
+    int startOffset = offset;
+    for (T value : values)
+      offset += Primitive<T>(value).packField(buffer, offset);
+
+    return offset - startOffset;
+  }
+
+  int unpackField(Buffer& buffer, int offset) {
+    int startOffset = offset;
+    for (int i = 0; i < N; i++)
+      offset += Primitive<T>(values[i]).unpackField(buffer, offset);
+
+    return offset - startOffset;
+  }
+
+ private:
+  std::array<T, N>& values;
+};
+
+// TODO: Will have problems if respective packet doesn't have default
+// constructor
+template <typename T>
+  requires(std::derived_from<T, Packet>)
+class PacketVector : public IField {
+ public:
+  PacketVector(std::vector<std::unique_ptr<T>>& values) : values(values) {}
+
+ protected:
+  int packField(Buffer& buffer, int offset) {
+    int startOffset = offset;
+    for (std::unique_ptr<T>& value : values)
+      offset += value->packField(buffer, offset);
+
+    return offset - startOffset;
+  }
+
+  int unpackField(Buffer& buffer, int offset) {
+    int startOffset = offset;
+    values.clear();
+    while (offset < buffer.size()) {
+      values.push_back(std::make_unique<T>());
+      offset += values.back()->unpackField(buffer, offset);
+      if (values.back()->isEnd())
+        break;
+    }
+
+    return offset - startOffset;
+  }
+
+ private:
+  std::vector<std::unique_ptr<T>>& values;
+};
+
+// The inheritance and constructor are probably bad ideas
+class Packet : public IField {
+ public:
   int packField(Buffer& buffer, int offset);
   int unpackField(Buffer& buffer, int offset);
   Buffer pack();
   int unpack(Buffer& buffer);
+  bool isEnd() { return false; }
 
  protected:
-  template <FieldType T>
+  template <std::unsigned_integral T>
   void field(T& value) {
-    fields.push_back(std::make_unique<Field<T>>(value));
+    fields.push_back(std::make_unique<Primitive<T>>(value));
   }
 
-  template <FieldType T>
-  void array(std::vector<T>& values, uint32_t& lengthRef) {
-    fields.push_back(std::make_unique<Array<T>>(values, lengthRef));
+  template <std::unsigned_integral T>
+  void vector(std::vector<T>& values, uint32_t& lengthRef) {
+    fields.push_back(std::make_unique<Vector<T>>(values, lengthRef));
+  }
+
+  template <std::unsigned_integral T, size_t N>
+  void array(std::array<T, N>& values) {
+    fields.push_back(std::make_unique<Array<T, N>>(values));
+  }
+
+  template <typename T>
+    requires(std::derived_from<T, Packet>)
+  void packetVector(std::vector<std::unique_ptr<T>>& values) {
+    fields.push_back(std::make_unique<PacketVector<T>>(values));
   }
 
   void uint32Length() {
-    fields.push_back(std::make_unique<Field<uint32_t>>(lengthRef));
+    fields.push_back(std::make_unique<Primitive<uint32_t>>(lengthRef));
   }
 
  private:

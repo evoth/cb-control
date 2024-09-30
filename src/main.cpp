@@ -8,6 +8,7 @@ class TestPacket : public Packet {
   uint32_t type = 0x07;
   uint32_t vecLen = 0;
   std::vector<uint32_t> vec;
+  std::array<uint32_t, 2> arr = {44, 45};
 
   TestPacket() {
     uint32Length();
@@ -15,21 +16,25 @@ class TestPacket : public Packet {
     field(vecLen);
     vec.push_back(23);
     vec.push_back(25);
-    array(vec, vecLen);
+    vector(vec, vecLen);
+    array(arr);
   }
 
   TestPacket(Buffer& buffer) : TestPacket() { unpack(buffer); }
+
+  bool isEnd() { return type == 0; }
 };
 
 class TestPacket2 : public Packet {
  public:
   using Packet::length;
-  TestPacket p1;
-  TestPacket p2;
+  std::vector<std::unique_ptr<TestPacket>> arr;
   TestPacket2() {
-    field<TestPacket>(p1);
+    arr.push_back(std::make_unique<TestPacket>());
+    arr.push_back(std::make_unique<TestPacket>());
+    arr.back()->type = 0;
+    packetVector(arr);
     uint32Length();
-    field<TestPacket>(p2);
   }
 
   TestPacket2(Buffer& buffer) : TestPacket2() { unpack(buffer); }
@@ -37,8 +42,8 @@ class TestPacket2 : public Packet {
 
 int main() {
   TestPacket2 tim;
-  tim.p2.type = 0x05;
-  tim.p2.vec[1] = 99;
+  // tim.arr[1]->type = 0x05;
+  tim.arr[1]->vec[1] = 99;
   Buffer buff = tim.pack();
   std::cout << std::endl;
   for (auto& e : buff) {
@@ -46,14 +51,13 @@ int main() {
   }
 
   TestPacket2 newTim;
-  newTim.p1.vec[0] = 55;
+  newTim.arr[0]->vec[0] = 55;
+  newTim.arr[0]->arr[0] = 55;
   newTim.unpack(buff);
   std::cout << std::endl
             << newTim.length << std::endl
-            << newTim.p1.length << std::endl
-            << newTim.p2.length << std::endl
-            << newTim.p1.type << std::endl
-            << newTim.p2.type << std::endl
-            << newTim.p1.vec[0] << std::endl;
+            << newTim.arr[0]->length << std::endl
+            << newTim.arr[1]->length << std::endl
+            << newTim.arr[1]->vec[1] << std::endl;
   return 0;
 }
