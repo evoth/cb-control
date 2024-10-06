@@ -12,18 +12,18 @@
 typedef std::vector<unsigned char> Buffer;
 class Packet;
 
+// TODO: Static method to return value while unpacking without needing instance
 class IField {
  public:
   IField() : lengthRef(length) {}
   IField(uint32_t& lengthRef) : lengthRef(lengthRef) {}
 
-  virtual int packField(Buffer& buffer, int offset) = 0;
-  virtual int unpackField(Buffer& buffer, int offset) = 0;
+  virtual void packField(Buffer& buffer, int& offset) = 0;
+  virtual void unpackField(Buffer& buffer, int& offset) = 0;
 
  protected:
   uint32_t length = 0;
   uint32_t& lengthRef;
-  // static(?) getType()
 };
 
 // TODO: Restrict template
@@ -32,17 +32,17 @@ class Primitive : public IField {
  public:
   Primitive(T& value) : value(value) {}
 
-  int packField(Buffer& buffer, int offset) {
-    return packFieldHelper(value, buffer, offset);
+  void packField(Buffer& buffer, int& offset) {
+    packFieldHelper(value, buffer, offset);
   }
 
-  int unpackField(Buffer& buffer, int offset) {
-    return unpackFieldHelper(value, buffer, offset);
+  void unpackField(Buffer& buffer, int& offset) {
+    unpackFieldHelper(value, buffer, offset);
   }
 
  protected:
   template <std::unsigned_integral U>
-  int packFieldHelper(U& value, Buffer& buffer, int offset) {
+  void packFieldHelper(U& value, Buffer& buffer, int& offset) {
     for (int i = 0; i < sizeof(U); i++) {
       const unsigned char byte = (value >> i * 8) & 0xFF;
       if (offset + i < buffer.size())
@@ -50,18 +50,18 @@ class Primitive : public IField {
       else
         buffer.push_back(byte);
     }
-    return sizeof(U);
+    offset += sizeof(U);
   }
 
   template <std::unsigned_integral U>
-  int unpackFieldHelper(U& value, Buffer& buffer, int offset) {
+  void unpackFieldHelper(U& value, Buffer& buffer, int& offset) {
     value = 0;
     for (int i = 0; i < sizeof(U); i++) {
       // Current behavior will assume byte=0x00 if out of range
       if (offset + i < buffer.size())
         value |= (buffer[offset + i]) << i * 8;
     }
-    return sizeof(U);
+    offset += sizeof(U);
   }
 
  private:
@@ -72,29 +72,23 @@ template <std::unsigned_integral T>
 class Vector : public IField {
  public:
   Vector(std::vector<T>& values, uint32_t& lengthRef)
-      : values(values), IField(lengthRef) {}
+      : IField(lengthRef), values(values) {}
 
  protected:
-  int packField(Buffer& buffer, int offset) {
-    int startOffset = offset;
+  void packField(Buffer& buffer, int& offset) {
     for (T& value : values)
-      offset += Primitive<T>(value).packField(buffer, offset);
+      Primitive<T>(value).packField(buffer, offset);
 
     lengthRef = values.size();
-
-    return offset - startOffset;
   }
 
-  int unpackField(Buffer& buffer, int offset) {
-    int startOffset = offset;
+  void unpackField(Buffer& buffer, int& offset) {
     values.clear();
     for (int i = 0; i < lengthRef; i++) {
       T value;
-      offset += Primitive<T>(value).unpackField(buffer, offset);
+      Primitive<T>(value).unpackField(buffer, offset);
       values.push_back(value);
     }
-
-    return offset - startOffset;
   }
 
  private:
@@ -107,20 +101,14 @@ class Array : public IField {
   Array(std::array<T, N>& values) : values(values) {}
 
  protected:
-  int packField(Buffer& buffer, int offset) {
-    int startOffset = offset;
+  void packField(Buffer& buffer, int& offset) {
     for (T value : values)
-      offset += Primitive<T>(value).packField(buffer, offset);
-
-    return offset - startOffset;
+      Primitive<T>(value).packField(buffer, offset);
   }
 
-  int unpackField(Buffer& buffer, int offset) {
-    int startOffset = offset;
+  void unpackField(Buffer& buffer, int& offset) {
     for (int i = 0; i < N; i++)
-      offset += Primitive<T>(values[i]).unpackField(buffer, offset);
-
-    return offset - startOffset;
+      Primitive<T>(values[i]).unpackField(buffer, offset);
   }
 
  private:
@@ -129,46 +117,60 @@ class Array : public IField {
 
 // TODO: Will have problems if respective packet doesn't have default
 // constructor
-template <typename T>
-  requires(std::derived_from<T, Packet>)
-class PacketVector : public IField {
- public:
-  PacketVector(std::vector<std::unique_ptr<T>>& values) : values(values) {}
+// class PacketVector : public IField {
+//  public:
+//   PacketVector(std::vector<std::unique_ptr<Packet>>& values) : values(values)
+//   {}
 
- protected:
-  int packField(Buffer& buffer, int offset) {
-    int startOffset = offset;
-    for (std::unique_ptr<T>& value : values)
-      offset += value->packField(buffer, offset);
+//  protected:
+//   void packField(Buffer& buffer, int& offset) {
+//     for (std::unique_ptr<Packet>& value : values)
+//       value->packField(buffer, offset);
+//   }
 
-    return offset - startOffset;
-  }
+//   void unpackField(Buffer& buffer, int& offset) {
+//     // int startOffset = offset;
+//     // values.clear();
+//     // while (offset < buffer.size()) {
+//     //   values.push_back(std::make_unique<Packet>());
+//     //   offset += values.back()->unpackField(buffer, offset);
+//     //   if (values.back()->isEnd())
+//     //     break;
+//     // }
+//   }
 
-  int unpackField(Buffer& buffer, int offset) {
-    int startOffset = offset;
-    values.clear();
-    while (offset < buffer.size()) {
-      values.push_back(std::make_unique<T>());
-      offset += values.back()->unpackField(buffer, offset);
-      if (values.back()->isEnd())
-        break;
-    }
-
-    return offset - startOffset;
-  }
-
- private:
-  std::vector<std::unique_ptr<T>>& values;
-};
+//  private:
+//   std::vector<std::unique_ptr<Packet>>& values;
+// };
 
 // The inheritance and constructor are probably bad ideas
 class Packet : public IField {
  public:
-  int packField(Buffer& buffer, int offset);
-  int unpackField(Buffer& buffer, int offset);
+  using IField::length;
+  uint32_t type = 0;
+
+  Packet(uint32_t defaultType) : type(defaultType) {
+    uint32Length();
+    field(type);
+  }
+
+  void packField(Buffer& buffer, int& offset);
+  void unpackField(Buffer& buffer, int& offset);
   Buffer pack();
-  int unpack(Buffer& buffer);
+  void unpack(Buffer& buffer);
   bool isEnd() { return false; }
+
+  std::unique_ptr<Packet> choose(Buffer& buffer) {
+    std::unique_ptr<Packet> testPacket = std::make_unique<Packet>(0);
+    testPacket->unpack(buffer);
+    for (std::unique_ptr<Packet>& choicePacket : choices) {
+      if (testPacket->type == choicePacket->type) {
+        choicePacket->unpack(buffer);
+        return std::move(choicePacket);
+      }
+    }
+    return testPacket;
+  }
 
  protected:
   template <std::unsigned_integral T>
@@ -186,18 +188,23 @@ class Packet : public IField {
     fields.push_back(std::make_unique<Array<T, N>>(values));
   }
 
-  template <typename T>
-    requires(std::derived_from<T, Packet>)
-  void packetVector(std::vector<std::unique_ptr<T>>& values) {
-    fields.push_back(std::make_unique<PacketVector<T>>(values));
-  }
+  // void packetVector(std::vector<std::unique_ptr<Packet>>& values) {
+  //   fields.push_back(std::make_unique<PacketVector>(values));
+  // }
 
   void uint32Length() {
     fields.push_back(std::make_unique<Primitive<uint32_t>>(lengthRef));
   }
 
+  template <typename T>
+    requires(std::derived_from<T, Packet>)
+  void choice() {
+    choices.push_back(std::make_unique<T>());
+  }
+
  private:
   std::vector<std::unique_ptr<IField>> fields;
+  std::vector<std::unique_ptr<Packet>> choices;
 };
 
 #endif

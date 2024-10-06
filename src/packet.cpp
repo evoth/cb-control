@@ -2,32 +2,29 @@
 
 Buffer Packet::pack() {
   Buffer buffer;
-  packField(buffer, 0);
+  int offset = 0;
+  packField(buffer, offset);
   return buffer;
 }
 
-int Packet::unpack(Buffer& buffer) {
-  return unpackField(buffer, 0);
+void Packet::unpack(Buffer& buffer) {
+  int offset = 0;
+  unpackField(buffer, offset);
 }
 
-int Packet::packField(Buffer& buffer, int offset) {
+void Packet::packField(Buffer& buffer, int& offset) {
   int startOffset = offset;
   for (std::unique_ptr<IField>& field : fields)
-    offset += field->packField(buffer, offset);
+    field->packField(buffer, offset);
 
   lengthRef = offset - startOffset;
 
   offset = startOffset;
   for (std::unique_ptr<IField>& field : fields)
-    offset += field->packField(buffer, offset);
-
-  return offset - startOffset;
+    field->packField(buffer, offset);
 }
 
-int Packet::unpackField(Buffer& buffer, int offset) {
-  int startOffset = offset;
+void Packet::unpackField(Buffer& buffer, int& offset) {
   for (std::unique_ptr<IField>& field : fields)
-    offset += field->unpackField(buffer, offset);
-
-  return offset - startOffset;
+    field->unpackField(buffer, offset);
 }
