@@ -7,12 +7,14 @@ class TestPacket : public Packet {
   uint32_t vecLen = 0;
   std::vector<uint32_t> vec;
   std::array<uint32_t, 2> arr = {44, 45};
+  std::string s = "Hello Tim";
   TestPacket() : Packet(0x07) {
     field(vecLen);
+    field(s);
     vec.push_back(23);
     vec.push_back(25);
-    vector(vec, vecLen);
-    array(arr);
+    field(vec, vecLen);
+    field(arr);
   }
 };
 
@@ -34,7 +36,7 @@ class TestPacketChoice : public Choice<TestPacket> {};
 class TestPacket4 : public Packet {
  public:
   std::vector<std::unique_ptr<Packet>> vec;
-  TestPacket4() : Packet(0x09) { choiceVector<TestPacket3>(vec); }
+  TestPacket4() : Packet(0x09) { field<TestPacket3>(vec); }
 };
 
 int main() {
@@ -58,6 +60,7 @@ int main() {
     std::cout << std::endl
               << newTim->length << std::endl
               << newTim->type << std::endl
+              << newTim->s << std::endl
               << newTim->arr[0] << std::endl
               << newTim->arr[1] << std::endl;
   } else {

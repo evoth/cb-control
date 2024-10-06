@@ -11,12 +11,17 @@
 
 typedef std::vector<unsigned char> Buffer;
 class Packet;
+
 template <typename T>
   requires(std::derived_from<T, Packet>)
 class Choice;
+
 template <typename T, typename U>
   requires(std::derived_from<T, Choice<U>>)
 class ChoiceVector;
+
+// template <typename T>
+// concept PrimitiveType = std::unsigned_integral<T>;
 
 // TODO: Static method to return value while unpacking without needing
 // instance
@@ -51,7 +56,7 @@ class Primitive : public IField {
   template <std::unsigned_integral U>
   void packFieldHelper(U& value, Buffer& buffer, int& offset) {
     for (int i = 0; i < sizeof(U); i++) {
-      const unsigned char byte = (value >> i * 8) & 0xFF;
+      unsigned char byte = (value >> i * 8) & 0xFF;
       if (offset + i < buffer.size())
         buffer[offset + i] = byte;
       else
@@ -109,7 +114,7 @@ class Array : public IField {
 
  protected:
   void pack(Buffer& buffer, int& offset) {
-    for (T value : values)
+    for (T& value : values)
       Primitive<T>(value).pack(buffer, offset);
   }
 
@@ -122,14 +127,46 @@ class Array : public IField {
   std::array<T, N>& values;
 };
 
-// TODO: Redundant overloads?
+class String : public IField {
+ public:
+  String(std::string& value) : value(value) {}
+
+ protected:
+  void pack(Buffer& buffer, int& offset) {
+    uint16_t wideChar;
+    Primitive packer = Primitive(wideChar);
+    for (char& c : value) {
+      wideChar = c;
+      packer.pack(buffer, offset);
+    }
+    wideChar = 0;
+    packer.pack(buffer, offset);
+  }
+
+  void unpack(Buffer& buffer, int& offset) {
+    uint16_t wideChar;
+    Primitive unpacker = Primitive(wideChar);
+    value.clear();
+    while (offset < buffer.size()) {
+      unpacker.unpack(buffer, offset);
+      if (!wideChar)
+        break;
+      value.push_back(wideChar);
+    }
+  }
+
+ private:
+  std::string& value;
+};
+
+// TODO: The overloading on field is kind of fun but hurts readability
 class Packet : public IField {
  public:
   using IField::length;
   uint32_t type = 0;
 
   Packet(uint32_t defaultType = 0) : type(defaultType) {
-    uint32Length();
+    field();
     field(type);
   }
 
@@ -147,22 +184,26 @@ class Packet : public IField {
   }
 
   template <std::unsigned_integral T>
-  void vector(std::vector<T>& values, uint32_t& lengthRef) {
+  void field(std::vector<T>& values, uint32_t& lengthRef) {
     fields.push_back(std::make_unique<Vector<T>>(values, lengthRef));
   }
 
   template <std::unsigned_integral T, size_t N>
-  void array(std::array<T, N>& values) {
+  void field(std::array<T, N>& values) {
     fields.push_back(std::make_unique<Array<T, N>>(values));
+  }
+
+  void field(std::string& value) {
+    fields.push_back(std::make_unique<String>(value));
   }
 
   template <typename T, typename U>
     requires(std::derived_from<T, Choice<U>>)
-  void choiceVector(std::vector<std::unique_ptr<U>>& values) {
+  void field(std::vector<std::unique_ptr<U>>& values) {
     fields.push_back(std::make_unique<ChoiceVector<T, U>>(values));
   }
 
-  void uint32Length() {
+  void field() {
     fields.push_back(std::make_unique<Primitive<uint32_t>>(lengthRef));
   }
 
@@ -173,11 +214,9 @@ class Packet : public IField {
 // TODo: Figure out what I did and why
 template <typename T>
   requires(std::derived_from<T, Packet>)
-class Choice : public Packet {
+class Choice {
  public:
-  Choice(uint32_t defaultType = 0) : Packet(defaultType) {}
-
-  std::unique_ptr<T> unpackPointer(Buffer& buffer, int& offset) {
+  std::unique_ptr<T> choose(Buffer& buffer, int& offset) {
     int startOffset = offset;
     std::unique_ptr<T> testPacket = std::make_unique<T>();
     testPacket->unpack(buffer, offset);
@@ -228,7 +267,7 @@ class ChoiceVector : public IField {
     while (offset < buffer.size()) {
       startOffset = offset;
       T choicePacket;
-      values.push_back(choicePacket.unpackPointer(buffer, offset));
+      values.push_back(choicePacket.choose(buffer, offset));
       offset = startOffset + values.back()->length;
       if (values.back()->isEnd())
         break;
