@@ -68,7 +68,9 @@
       "xiosbase": "cpp",
       "xlocale": "cpp",
       "xlocinfo": "cpp",
-      "xlocnum": "cpp"
+      "xlocnum": "cpp",
+      "xlocmon": "cpp",
+      "xloctime": "cpp"
     },
     "[cpp]": {
       "editor.defaultFormatter": "ms-vscode.cpptools",

@@ -5,19 +5,23 @@
 #include <concepts>
 #include <cstdint>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <vector>
 
+// TODO: Replace templates with Concept auto where possible?
+// TODO: Use requires clauses in more concise way
+
 typedef std::vector<unsigned char> Buffer;
 class Packet;
 
-template <typename T>
-  requires(std::derived_from<T, Packet>)
-class Choice;
+template <typename T, typename... Args>
+concept ChoiceType =
+    std::derived_from<T, Packet> && (std::derived_from<Args, T> && ...);
 
-template <typename T, typename U>
-  requires(std::derived_from<T, Choice<U>>)
+template <typename T, typename... Args>
+  requires ChoiceType<T, Args...>
 class ChoiceVector;
 
 // template <typename T>
@@ -177,6 +181,27 @@ class Packet : public IField {
 
   virtual bool isEnd() { return false; }
 
+  template <typename T>
+    requires(std::derived_from<T, Packet>)
+  std::unique_ptr<T> is() {
+    std::unique_ptr<T> testPacket = std::make_unique<T>();
+    if (type == testPacket->type)
+      return testPacket;
+    return nullptr;
+  }
+
+  template <typename T>
+    requires(std::derived_from<T, Packet>)
+  static std::unique_ptr<T> unpackAs(Buffer& buffer) {
+    Packet testPacket;
+    testPacket.unpack(buffer);
+    if (std::unique_ptr<T> packet = testPacket.is<T>()) {
+      packet->unpack(buffer);
+      return packet;
+    }
+    return nullptr;
+  }
+
  protected:
   template <std::unsigned_integral T>
   void field(T& value) {
@@ -197,11 +222,16 @@ class Packet : public IField {
     fields.push_back(std::make_unique<String>(value));
   }
 
-  template <typename T, typename U>
-    requires(std::derived_from<T, Choice<U>>)
-  void field(std::vector<std::unique_ptr<U>>& values) {
-    fields.push_back(std::make_unique<ChoiceVector<T, U>>(values));
+  template <typename T, typename... Args>
+    requires ChoiceType<T, Args...>
+  void field(std::vector<std::unique_ptr<T>>& values) {
+    fields.push_back(std::make_unique<ChoiceVector<T, Args...>>(values));
   }
+
+  // template <typename... Args>
+  // void fields(Args... args) {
+  //   (field(args), ...);
+  // }
 
   void field() {
     fields.push_back(std::make_unique<Primitive<uint32_t>>(lengthRef));
@@ -211,53 +241,18 @@ class Packet : public IField {
   std::vector<std::unique_ptr<IField>> fields;
 };
 
-// TODo: Figure out what I did and why
-template <typename T>
-  requires(std::derived_from<T, Packet>)
-class Choice {
- public:
-  std::unique_ptr<T> choose(Buffer& buffer, int& offset) {
-    int startOffset = offset;
-    std::unique_ptr<T> testPacket = std::make_unique<T>();
-    testPacket->unpack(buffer, offset);
-    choicesList.clear();
-    choices();
-    for (std::unique_ptr<T>& choicePacket : choicesList) {
-      if (testPacket->type == choicePacket->type) {
-        offset = startOffset;
-        choicePacket->unpack(buffer, offset);
-        return std::move(choicePacket);
-      }
-    }
-    choicesList.clear();
-    return testPacket;
-  }
-
- protected:
-  template <typename U>
-    requires(std::derived_from<U, T>)
-  void choice() {
-    choicesList.push_back(std::make_unique<U>());
-  }
-
-  virtual void choices() {}
-
- private:
-  std::vector<std::unique_ptr<T>> choicesList;
-};
-
 // TODO: Will have problems if respective packet doesn't have default
 // constructor
-// TODo: Figure out what I did and why
-template <typename T, typename U>
-  requires(std::derived_from<T, Choice<U>>)
+// TODo: Figure out better way or simplify
+template <typename T, typename... Args>
+  requires ChoiceType<T, Args...>
 class ChoiceVector : public IField {
  public:
-  ChoiceVector(std::vector<std::unique_ptr<U>>& values) : values(values) {}
+  ChoiceVector(std::vector<std::unique_ptr<T>>& values) : values(values) {}
 
  protected:
   void pack(Buffer& buffer, int& offset) {
-    for (std::unique_ptr<U>& value : values)
+    for (std::unique_ptr<T>& value : values)
       value->pack(buffer, offset);
   }
 
@@ -266,8 +261,7 @@ class ChoiceVector : public IField {
     values.clear();
     while (offset < buffer.size()) {
       startOffset = offset;
-      T choicePacket;
-      values.push_back(choicePacket.choose(buffer, offset));
+      values.push_back(choose(buffer, offset));
       offset = startOffset + values.back()->length;
       if (values.back()->isEnd())
         break;
@@ -275,7 +269,30 @@ class ChoiceVector : public IField {
   }
 
  private:
-  std::vector<std::unique_ptr<U>>& values;
+  std::vector<std::unique_ptr<T>>& values;
+
+  std::unique_ptr<T> choose(Buffer& buffer, int& offset) {
+    int startOffset = offset;
+    std::unique_ptr<T> testPacket = std::make_unique<T>();
+    testPacket->unpack(buffer, offset);
+
+    std::vector<std::unique_ptr<T>> choicesList;
+    (choice<Args>(choicesList), ...);
+    for (std::unique_ptr<T>& choicePacket : choicesList) {
+      if (testPacket->type == choicePacket->type) {
+        offset = startOffset;
+        choicePacket->unpack(buffer, offset);
+        return std::move(choicePacket);
+      }
+    }
+    return testPacket;
+  }
+
+  template <typename U>
+    requires(std::derived_from<U, T>)
+  void choice(std::vector<std::unique_ptr<T>>& choicesList) {
+    choicesList.push_back(std::make_unique<U>());
+  }
 };
 
 #endif
