@@ -5,7 +5,6 @@
 #include <concepts>
 #include <cstdint>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -19,10 +18,6 @@ class Packet;
 template <typename T, typename... Args>
 concept ChoiceType =
     std::derived_from<T, Packet> && (std::derived_from<Args, T> && ...);
-
-template <typename T, typename... Args>
-  requires ChoiceType<T, Args...>
-class ChoiceVector;
 
 // template <typename T>
 // concept PrimitiveType = std::unsigned_integral<T>;
@@ -163,6 +158,60 @@ class String : public IField {
   std::string& value;
 };
 
+// TODO: Will have problems if respective packet doesn't have default
+// constructor
+// TODo: Figure out better way or simplify
+template <typename T, typename... Args>
+  requires ChoiceType<T, Args...>
+class ChoiceVector : public IField {
+ public:
+  ChoiceVector(std::vector<std::unique_ptr<T>>& values) : values(values) {}
+
+ protected:
+  void pack(Buffer& buffer, int& offset) {
+    for (std::unique_ptr<T>& value : values)
+      value->pack(buffer, offset);
+  }
+
+  void unpack(Buffer& buffer, int& offset) {
+    int startOffset = offset;
+    values.clear();
+    while (offset < buffer.size()) {
+      startOffset = offset;
+      values.push_back(choose(buffer, offset));
+      offset = startOffset + values.back()->length;
+      if (values.back()->isEnd())
+        break;
+    }
+  }
+
+ private:
+  std::vector<std::unique_ptr<T>>& values;
+
+  std::unique_ptr<T> choose(Buffer& buffer, int& offset) {
+    int startOffset = offset;
+    std::unique_ptr<T> testPacket = std::make_unique<T>();
+    testPacket->unpack(buffer, offset);
+
+    std::vector<std::unique_ptr<T>> choicesList;
+    (choice<Args>(choicesList), ...);
+    for (std::unique_ptr<T>& choicePacket : choicesList) {
+      if (testPacket->type == choicePacket->type) {
+        offset = startOffset;
+        choicePacket->unpack(buffer, offset);
+        return std::move(choicePacket);
+      }
+    }
+    return testPacket;
+  }
+
+  template <typename U>
+    requires(std::derived_from<U, T>)
+  void choice(std::vector<std::unique_ptr<T>>& choicesList) {
+    choicesList.push_back(std::make_unique<U>());
+  }
+};
+
 // TODO: The overloading on field is kind of fun but hurts readability
 class Packet : public IField {
  public:
@@ -239,60 +288,6 @@ class Packet : public IField {
 
  private:
   std::vector<std::unique_ptr<IField>> fields;
-};
-
-// TODO: Will have problems if respective packet doesn't have default
-// constructor
-// TODo: Figure out better way or simplify
-template <typename T, typename... Args>
-  requires ChoiceType<T, Args...>
-class ChoiceVector : public IField {
- public:
-  ChoiceVector(std::vector<std::unique_ptr<T>>& values) : values(values) {}
-
- protected:
-  void pack(Buffer& buffer, int& offset) {
-    for (std::unique_ptr<T>& value : values)
-      value->pack(buffer, offset);
-  }
-
-  void unpack(Buffer& buffer, int& offset) {
-    int startOffset = offset;
-    values.clear();
-    while (offset < buffer.size()) {
-      startOffset = offset;
-      values.push_back(choose(buffer, offset));
-      offset = startOffset + values.back()->length;
-      if (values.back()->isEnd())
-        break;
-    }
-  }
-
- private:
-  std::vector<std::unique_ptr<T>>& values;
-
-  std::unique_ptr<T> choose(Buffer& buffer, int& offset) {
-    int startOffset = offset;
-    std::unique_ptr<T> testPacket = std::make_unique<T>();
-    testPacket->unpack(buffer, offset);
-
-    std::vector<std::unique_ptr<T>> choicesList;
-    (choice<Args>(choicesList), ...);
-    for (std::unique_ptr<T>& choicePacket : choicesList) {
-      if (testPacket->type == choicePacket->type) {
-        offset = startOffset;
-        choicePacket->unpack(buffer, offset);
-        return std::move(choicePacket);
-      }
-    }
-    return testPacket;
-  }
-
-  template <typename U>
-    requires(std::derived_from<U, T>)
-  void choice(std::vector<std::unique_ptr<T>>& choicesList) {
-    choicesList.push_back(std::make_unique<U>());
-  }
 };
 
 #endif

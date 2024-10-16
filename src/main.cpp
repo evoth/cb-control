@@ -1,22 +1,7 @@
-#include "packet.h"
+#include "ptpip.h"
 
 #include <iomanip>
 #include <iostream>
-
-// TODO: Cleaner constructors
-class InitCommandRequest : public Packet {
- public:
-  std::array<uint8_t, 16> guid;
-  std::string name;
-  uint32_t ptpVersion = 0x10000;
-
-  InitCommandRequest(std::array<uint8_t, 16> guid = {0}, std::string name = "")
-      : Packet(0x01), guid(guid), name(name) {
-    field(this->guid);
-    field(this->name);
-    field(this->ptpVersion);
-  }
-};
 
 int main() {
   InitCommandRequest initCommandRequest(
