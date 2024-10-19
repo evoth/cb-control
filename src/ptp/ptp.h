@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <exception>
+#include <format>
 #include <string>
 #include <vector>
 
@@ -13,12 +14,13 @@
 // having to duplicate definitions?
 class PTPOperationException : public std::exception {
  public:
-  PTPOperationException(uint32_t responseCode);
+  PTPOperationException(uint32_t responseCode)
+      : message(std::format("PTP Operation Error: {:#04x}", responseCode)) {}
 
   const char* what() const noexcept override { return message.c_str(); }
 
  private:
-  std::string message;
+  const std::string message;
 };
 
 struct OperationRequestData {
