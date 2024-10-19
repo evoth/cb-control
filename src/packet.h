@@ -222,10 +222,34 @@ class Packet : public IField {
     field(type);
   }
 
-  void pack(Buffer& buffer, int& offset) override;
-  void unpack(Buffer& buffer, int& offset) override;
-  Buffer pack();
-  void unpack(Buffer& buffer);
+  void pack(Buffer& buffer, int& offset) override {
+    int startOffset = offset;
+    for (std::unique_ptr<IField>& field : fields)
+      field->pack(buffer, offset);
+
+    lengthRef = offset - startOffset;
+
+    offset = startOffset;
+    for (std::unique_ptr<IField>& field : fields)
+      field->pack(buffer, offset);
+  };
+
+  void unpack(Buffer& buffer, int& offset) override {
+    for (std::unique_ptr<IField>& field : fields)
+      field->unpack(buffer, offset);
+  };
+
+  Buffer pack() {
+    Buffer buffer;
+    int offset = 0;
+    pack(buffer, offset);
+    return buffer;
+  };
+
+  void unpack(Buffer& buffer) {
+    int offset = 0;
+    unpack(buffer, offset);
+  };
 
   virtual bool isEnd() { return false; }
 

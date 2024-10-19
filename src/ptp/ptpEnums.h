@@ -1,3 +1,6 @@
+#ifndef CB_CONTROL_PTP_PTPENUMS_H
+#define CB_CONTROL_PTP_PTPENUMS_H
+
 #include <map>
 
 enum OperationCode {
@@ -161,3 +164,5 @@ const std::map<uint32_t, const char*> ResponseCodeMap = {
     {ResponseCode::NoStreamEnabled, "NoStreamEnabled"},
     {ResponseCode::InvalidDataset, "InvalidDataset"},
 };
+
+#endif

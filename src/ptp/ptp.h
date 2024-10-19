@@ -1,24 +1,19 @@
+#ifndef CB_CONTROL_PTP_PTP_H
+#define CB_CONTROL_PTP_PTP_H
+
 #include <array>
 #include <cstdint>
 #include <exception>
-#include <format>
 #include <string>
 #include <vector>
 
-#include "ptpEnums.h"
+// TODO: Move stuff into implementation file
 
 // TODO: Figure out elegant way to include name of error in message without
 // having to duplicate definitions?
 class PTPOperationException : public std::exception {
  public:
-  PTPOperationException(uint32_t errorCode) {
-    message = "PTP Operation Error: ";
-    if (OperationCodeMap.contains(errorCode))
-      message += OperationCodeMap.at(errorCode);
-    else
-      message += "[Unknown]";
-    message += std::format(" ({:#04x})", errorCode);
-  }
+  PTPOperationException(uint32_t responseCode);
 
   const char* what() const noexcept override { return message.c_str(); }
 
@@ -80,3 +75,5 @@ class PTPExtension {
   // uint32_t transactionId = 0;
   // bool isSessionOpen = false;
 };
+
+#endif

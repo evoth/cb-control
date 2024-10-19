@@ -1,3 +1,6 @@
+#ifndef CB_CONTROL_PTP_IP_H
+#define CB_CONTROL_PTP_IP_H
+
 #include "../packet.h"
 
 class InitCommandRequest : public Packet {
@@ -103,3 +106,5 @@ class EndData : public Packet {
 };
 
 // TODO: Ping, Pong
+
+#endif
