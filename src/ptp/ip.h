@@ -1,4 +1,4 @@
-#include "packet.h"
+#include "../packet.h"
 
 class InitCommandRequest : public Packet {
  public:
@@ -53,21 +53,13 @@ class OperationRequest : public Packet {
   uint32_t dataPhase = 0;
   uint16_t operationCode = 0;
   uint32_t transactionId = 0;
-  uint32_t param1 = 0;
-  uint32_t param2 = 0;
-  uint32_t param3 = 0;
-  uint32_t param4 = 0;
-  uint32_t param5 = 0;
+  std::array<uint32_t, 5> params = {0};
 
   OperationRequest() : Packet(0x06) {
     field(this->dataPhase);
     field(this->operationCode);
     field(this->transactionId);
-    field(this->param1);
-    field(this->param2);
-    field(this->param3);
-    field(this->param4);
-    field(this->param5);
+    field(this->params);
   }
 };
 
@@ -75,20 +67,12 @@ class OperationResponse : public Packet {
  public:
   uint16_t responseCode = 0;
   uint32_t transactionId = 0;
-  uint32_t param1 = 0;
-  uint32_t param2 = 0;
-  uint32_t param3 = 0;
-  uint32_t param4 = 0;
-  uint32_t param5 = 0;
+  std::array<uint32_t, 5> params = {0};
 
   OperationResponse() : Packet(0x07) {
     field(this->responseCode);
     field(this->transactionId);
-    field(this->param1);
-    field(this->param2);
-    field(this->param3);
-    field(this->param4);
-    field(this->param5);
+    field(this->params);
   }
 };
 
@@ -105,6 +89,8 @@ class StartData : public Packet {
   }
 };
 
+// TODO: Data, Cancel
+
 class EndData : public Packet {
  public:
   uint32_t transactionId = 0;
@@ -115,3 +101,5 @@ class EndData : public Packet {
     field(this->totalDataLength);
   }
 };
+
+// TODO: Ping, Pong

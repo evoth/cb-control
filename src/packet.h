@@ -4,9 +4,8 @@
 #include <array>
 #include <concepts>
 #include <cstdint>
-#include <functional>
 #include <memory>
-#include <optional>
+#include <string>
 #include <vector>
 
 // TODO: Replace templates with Concept auto where possible?
@@ -43,11 +42,11 @@ class Primitive : public IField {
  public:
   Primitive(T& value) : value(value) {}
 
-  void pack(Buffer& buffer, int& offset) {
+  void pack(Buffer& buffer, int& offset) override {
     packFieldHelper(value, buffer, offset);
   }
 
-  void unpack(Buffer& buffer, int& offset) {
+  void unpack(Buffer& buffer, int& offset) override {
     unpackFieldHelper(value, buffer, offset);
   }
 
@@ -86,14 +85,14 @@ class Vector : public IField {
       : IField(lengthRef), values(values) {}
 
  protected:
-  void pack(Buffer& buffer, int& offset) {
+  void pack(Buffer& buffer, int& offset) override {
     for (T& value : values)
       Primitive<T>(value).pack(buffer, offset);
 
     lengthRef = values.size();
   }
 
-  void unpack(Buffer& buffer, int& offset) {
+  void unpack(Buffer& buffer, int& offset) override {
     values.clear();
     for (int i = 0; i < lengthRef; i++) {
       T value;
@@ -112,12 +111,12 @@ class Array : public IField {
   Array(std::array<T, N>& values) : values(values) {}
 
  protected:
-  void pack(Buffer& buffer, int& offset) {
+  void pack(Buffer& buffer, int& offset) override {
     for (T& value : values)
       Primitive<T>(value).pack(buffer, offset);
   }
 
-  void unpack(Buffer& buffer, int& offset) {
+  void unpack(Buffer& buffer, int& offset) override {
     for (int i = 0; i < N; i++)
       Primitive<T>(values[i]).unpack(buffer, offset);
   }
@@ -131,7 +130,7 @@ class String : public IField {
   String(std::string& value) : value(value) {}
 
  protected:
-  void pack(Buffer& buffer, int& offset) {
+  void pack(Buffer& buffer, int& offset) override {
     uint16_t wideChar;
     Primitive packer = Primitive(wideChar);
     for (char& c : value) {
@@ -142,7 +141,7 @@ class String : public IField {
     packer.pack(buffer, offset);
   }
 
-  void unpack(Buffer& buffer, int& offset) {
+  void unpack(Buffer& buffer, int& offset) override {
     uint16_t wideChar;
     Primitive unpacker = Primitive(wideChar);
     value.clear();
@@ -168,12 +167,12 @@ class ChoiceVector : public IField {
   ChoiceVector(std::vector<std::unique_ptr<T>>& values) : values(values) {}
 
  protected:
-  void pack(Buffer& buffer, int& offset) {
+  void pack(Buffer& buffer, int& offset) override {
     for (std::unique_ptr<T>& value : values)
       value->pack(buffer, offset);
   }
 
-  void unpack(Buffer& buffer, int& offset) {
+  void unpack(Buffer& buffer, int& offset) override {
     int startOffset = offset;
     values.clear();
     while (offset < buffer.size()) {
@@ -223,8 +222,8 @@ class Packet : public IField {
     field(type);
   }
 
-  void pack(Buffer& buffer, int& offset);
-  void unpack(Buffer& buffer, int& offset);
+  void pack(Buffer& buffer, int& offset) override;
+  void unpack(Buffer& buffer, int& offset) override;
   Buffer pack();
   void unpack(Buffer& buffer);
 
