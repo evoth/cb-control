@@ -214,9 +214,6 @@ class ChoiceVector : public IField {
 // TODO: The overloading on field is kind of fun but hurts readability
 class Packet : public IField {
  public:
-  using IField::length;
-  uint32_t type = 0;
-
   Packet(uint32_t defaultType = 0) : type(defaultType) {
     field();
     field(type);
@@ -275,6 +272,8 @@ class Packet : public IField {
   }
 
  protected:
+  uint32_t type = 0;
+
   template <std::unsigned_integral T>
   void field(T& value) {
     fields.push_back(std::make_unique<Primitive<T>>(value));

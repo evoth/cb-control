@@ -2,6 +2,9 @@
 #define CB_CONTROL_PTP_IP_H
 
 #include "../packet.h"
+#include "ptp.h"
+
+// TODO: Figure out where to catch and deal with exceptions
 
 class InitCommandRequest : public Packet {
  public:
@@ -106,5 +109,48 @@ class EndData : public Packet {
 };
 
 // TODO: Ping, Pong
+
+class Socket {
+ public:
+  virtual bool connect(std::string ip, int port) = 0;
+  virtual bool close() = 0;
+  virtual bool isConnected() = 0;
+  virtual int send(Buffer& buffer) = 0;
+  virtual int recv(Buffer& buffer) = 0;
+};
+
+template <typename TSocket>
+  requires(std::derived_from<TSocket, Socket>)
+class PTPIP : public PTPTransport {
+ public:
+  PTPIP(std::string ip, int port = 15740) {
+    // TODO:
+  }
+  ~PTPIP() {
+    // TODO:
+  }
+
+  bool isOpen() override {
+
+  };
+
+  OperationResponseData send(OperationRequestData& request,
+                             uint32_t sessionId,
+                             uint32_t transactionId) override {
+    // TODO:
+  }
+
+  OperationResponseData recv(OperationRequestData& request,
+                             uint32_t sessionId,
+                             uint32_t transactionId) override {
+    // TODO:
+  }
+
+  OperationResponseData mesg(OperationRequestData& request,
+                             uint32_t sessionId,
+                             uint32_t transactionId) override {
+    // TODO:
+  }
+};
 
 #endif
