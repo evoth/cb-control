@@ -214,6 +214,8 @@ class ChoiceVector : public IField {
 // TODO: The overloading on field is kind of fun but hurts readability
 class Packet : public IField {
  public:
+  using IField::length;
+
   Packet(uint32_t defaultType = 0) : type(defaultType) {
     field();
     field(type);

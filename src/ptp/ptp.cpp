@@ -1,25 +1,15 @@
 #include "ptp.h"
 #include "ptpEnums.h"
 
-void PTPExtension::checkTransport() {
-  if (!transport)
-    throw PTPTransportException("No PTP transport provided.");
-  if (!transport->isOpen())
-    throw PTPTransportException("PTP transport is not open.");
-}
-
 OperationResponseData PTPExtension::send(OperationRequestData& request) {
-  checkTransport();
   transport->send(request, getSessionId(), getTransactionId());
 };
 
 OperationResponseData PTPExtension::recv(OperationRequestData& request) {
-  checkTransport();
   transport->recv(request, getSessionId(), getTransactionId());
 };
 
 OperationResponseData PTPExtension::mesg(OperationRequestData& request) {
-  checkTransport();
   transport->mesg(request, getSessionId(), getTransactionId());
 };
 

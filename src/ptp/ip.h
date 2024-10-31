@@ -4,15 +4,17 @@
 #include "../packet.h"
 #include "ptp.h"
 
+#include <queue>
+
 // TODO: Figure out where to catch and deal with exceptions
 
 class InitCommandRequest : public Packet {
  public:
-  std::array<uint8_t, 16> guid = {0};
+  std::array<uint8_t, 16> guid = {};
   std::string name = "";
   uint32_t ptpVersion = 0x10000;
 
-  InitCommandRequest(std::array<uint8_t, 16> guid = {0}, std::string name = "")
+  InitCommandRequest(std::array<uint8_t, 16> guid = {}, std::string name = "")
       : Packet(0x01), guid(guid), name(name) {
     field(this->guid);
     field(this->name);
@@ -23,7 +25,7 @@ class InitCommandRequest : public Packet {
 class InitCommandAck : public Packet {
  public:
   uint32_t connectionNum = 0;
-  std::array<uint8_t, 16> guid = {0};
+  std::array<uint8_t, 16> guid = {};
   std::string name = "";
   uint32_t ptpVersion = 0x10000;
 
@@ -39,7 +41,10 @@ class InitEventRequest : public Packet {
  public:
   uint32_t connectionNum = 0;
 
-  InitEventRequest() : Packet(0x03) { field(this->connectionNum); }
+  InitEventRequest(uint32_t connectionNum)
+      : Packet(0x03), connectionNum(connectionNum) {
+    field(this->connectionNum);
+  }
 };
 
 class InitEventAck : public Packet {
@@ -59,9 +64,17 @@ class OperationRequest : public Packet {
   uint32_t dataPhase = 0;
   uint16_t operationCode = 0;
   uint32_t transactionId = 0;
-  std::array<uint32_t, 5> params = {0};
+  std::array<uint32_t, 5> params = {};
 
-  OperationRequest() : Packet(0x06) {
+  OperationRequest(uint32_t dataPhase,
+                   uint16_t operationCode,
+                   uint32_t transactionId,
+                   std::array<uint32_t, 5> params)
+      : Packet(0x06),
+        dataPhase(dataPhase),
+        operationCode(operationCode),
+        transactionId(transactionId),
+        params(params) {
     field(this->dataPhase);
     field(this->operationCode);
     field(this->transactionId);
@@ -73,7 +86,7 @@ class OperationResponse : public Packet {
  public:
   uint16_t responseCode = 0;
   uint32_t transactionId = 0;
-  std::array<uint32_t, 5> params = {0};
+  std::array<uint32_t, 5> params = {};
 
   OperationResponse() : Packet(0x07) {
     field(this->responseCode);
@@ -110,34 +123,90 @@ class EndData : public Packet {
 
 // TODO: Ping, Pong
 
+// Ideally, these should not throw any exceptions
+// If send/recv are called when not connected, they should return 0
 class Socket {
  public:
   virtual bool connect(std::string ip, int port) = 0;
   virtual bool close() = 0;
   virtual bool isConnected() = 0;
   virtual int send(Buffer& buffer) = 0;
-  virtual int recv(Buffer& buffer) = 0;
+  // Should attempt to append `length` bytes to the buffer, waiting until enough
+  // bytes have accumulated or `timeoutMs` milliseconds have passed
+  virtual int recv(Buffer& buffer, int length, int timeoutMs = 1000) = 0;
 };
 
-template <typename TSocket>
-  requires(std::derived_from<TSocket, Socket>)
+// TODO: Move stuff into implementation file
 class PTPIP : public PTPTransport {
  public:
-  PTPIP(std::string ip, int port = 15740) {
-    // TODO:
+  PTPIP(std::array<uint8_t, 16> clientGuid,
+        std::string clientName,
+        std::unique_ptr<Socket> commandSocket,
+        std::unique_ptr<Socket> eventSocket,
+        std::string ip,
+        int port = 15740)
+      : commandSocket(std::move(commandSocket)),
+        eventSocket(std::move(eventSocket)) {
+    if (!commandSocket)
+      throw PTPTransportException("No command socket provided.");
+    if (!eventSocket)
+      throw PTPTransportException("No event socket provided.");
+
+    if (!commandSocket->connect(ip, port))
+      throw PTPTransportException("Unable to connect command socket.");
+
+    Buffer response;
+
+    InitCommandRequest initCmdReq(clientGuid, clientName);
+    sendPacket(commandSocket, initCmdReq);
+    recvPacket(commandSocket, response);
+    auto initCmdAck = Packet::unpackAs<InitCommandAck>(response);
+
+    if (!initCmdAck) {
+      // TODO: Move to helper function to avoid duplication?
+      if (auto initFail = Packet::unpackAs<InitFail>(response))
+        throw PTPTransportException(
+            std::format("Init Fail (reason code {:#04x})", initFail->reason)
+                .c_str());
+      throw PTPTransportException("Unexpected packet type.");
+    }
+
+    guid = initCmdAck->guid;
+    name = initCmdAck->name;
+
+    if (!eventSocket->connect(ip, port))
+      throw PTPTransportException("Unable to connect event socket.");
+
+    InitEventRequest initEvtReq(initCmdAck->connectionNum);
+    sendPacket(eventSocket, initEvtReq);
+    recvPacket(eventSocket, response);
+    auto initEvtAck = Packet::unpackAs<InitEventAck>(response);
+
+    if (!initEvtAck) {
+      // TODO: Move to helper function to avoid duplication?
+      if (auto initFail = Packet::unpackAs<InitFail>(response))
+        throw PTPTransportException(
+            std::format("Init Fail (reason code {:#04x})", initFail->reason)
+                .c_str());
+      throw PTPTransportException("Unexpected packet type.");
+    }
   }
+
   ~PTPIP() {
-    // TODO:
+    commandSocket->close();
+    eventSocket->close();
   }
 
   bool isOpen() override {
-
+    return commandSocket->isConnected() && eventSocket->isConnected();
   };
 
   OperationResponseData send(OperationRequestData& request,
                              uint32_t sessionId,
                              uint32_t transactionId) override {
     // TODO:
+    // if (!isOpen())
+    //   throw PTPTransportException("Transport is not open.");
   }
 
   OperationResponseData recv(OperationRequestData& request,
@@ -150,6 +219,48 @@ class PTPIP : public PTPTransport {
                              uint32_t sessionId,
                              uint32_t transactionId) override {
     // TODO:
+  }
+
+ private:
+  std::unique_ptr<Socket> commandSocket;
+  std::unique_ptr<Socket> eventSocket;
+  std::array<uint8_t, 16> guid;
+  std::string name;
+
+  void sendPacket(std::unique_ptr<Socket>& socket, Packet& packet) {
+    Buffer buffer = packet.pack();
+
+    int targetBytes = buffer.size();
+    int actualBytes = socket->send(buffer);
+    if (actualBytes < targetBytes)
+      throw PTPTransportException(
+          std::format("Socket unable to send packet ({}/{} bytes sent).",
+                      actualBytes, targetBytes)
+              .c_str());
+  }
+
+  void recvPacket(std::unique_ptr<Socket>& socket, Buffer& buffer) {
+    Packet packet;
+    buffer.clear();
+
+    int targetBytes = sizeof(packet.length);
+    int actualBytes = socket->recv(buffer, targetBytes);
+    if (actualBytes < targetBytes)
+      throw PTPTransportException(
+          std::format("Socket timed out while receiving packet length ({}/{} "
+                      "bytes received).",
+                      actualBytes, targetBytes)
+              .c_str());
+
+    packet.unpack(buffer);
+    targetBytes = packet.length - targetBytes;
+    actualBytes = socket->recv(buffer, targetBytes);
+    if (actualBytes < targetBytes)
+      throw PTPTransportException(
+          std::format("Socket timed out while receiving packet body ({}/{} "
+                      "bytes received).",
+                      actualBytes, targetBytes)
+              .c_str());
   }
 };
 

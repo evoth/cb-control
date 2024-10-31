@@ -9,7 +9,8 @@
 #include <string>
 #include <vector>
 
-// TODO: Figure out where to catch and deal with exceptions
+// TODO: Figure out where to catch and deal with exceptions (probably within
+// PTPExtension class)
 
 class PTPOperationException : public std::exception {
  public:
@@ -42,8 +43,8 @@ struct OperationRequestData {
   const std::vector<unsigned char> data;
 
   OperationRequestData(uint32_t operationCode,
-                       std::array<uint32_t, 5> params = {0},
-                       std::vector<unsigned char> data)
+                       std::array<uint32_t, 5> params = {},
+                       std::vector<unsigned char> data = {})
       : operationCode(operationCode), params(params), data(data) {}
 };
 
@@ -53,8 +54,8 @@ struct OperationResponseData {
   const std::vector<unsigned char> data;
 
   OperationResponseData(uint32_t responseCode,
-                        std::array<uint32_t, 5> params = {0},
-                        std::vector<unsigned char> data)
+                        std::array<uint32_t, 5> params = {},
+                        std::vector<unsigned char> data = {})
       : responseCode(responseCode), params(params), data(data) {}
 };
 
@@ -80,8 +81,10 @@ class PTPTransport {
 class PTPExtension {
  public:
   PTPExtension(std::unique_ptr<PTPTransport> transport)
-      : transport(std::move(transport)) {}
-  ~PTPExtension() { closeSession(); }
+      : transport(std::move(transport)) {
+    if (!transport)
+      throw PTPTransportException("No transport provided.");
+  }
 
   virtual void openSession();
   virtual void closeSession();
@@ -100,7 +103,6 @@ class PTPExtension {
 
   uint32_t getSessionId() { return isSessionOpen ? sessionId : 0; }
   uint32_t getTransactionId() { return isSessionOpen ? transactionId++ : 0; }
-  void checkTransport();
 };
 
 #endif

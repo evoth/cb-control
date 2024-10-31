@@ -79,7 +79,8 @@
       "stop_token": "cpp",
       "thread": "cpp",
       "xlocbuf": "cpp",
-      "xlocmes": "cpp"
+      "xlocmes": "cpp",
+      "queue": "cpp"
     },
     "[cpp]": {
       "editor.defaultFormatter": "ms-vscode.cpptools",
