@@ -11,6 +11,11 @@ class Socket {
   virtual bool connect(std::string ip, int port) = 0;
   virtual bool close() = 0;
   virtual bool isConnected() = 0;
+
+  void sendPacket(Packet& packet);
+  void recvPacket(Buffer& buffer);
+
+ protected:
   virtual int send(Buffer& buffer) = 0;
   // Should attempt to append `length` bytes to the buffer, waiting until enough
   // bytes have accumulated or `timeoutMs` milliseconds have passed
@@ -44,24 +49,21 @@ class PTPIP : public PTPTransport {
 
   OperationResponseData send(OperationRequestData& request,
                              uint32_t sessionId,
-                             uint32_t transactionId);
+                             uint32_t transactionId) override;
 
   OperationResponseData recv(OperationRequestData& request,
                              uint32_t sessionId,
-                             uint32_t transactionId);
+                             uint32_t transactionId) override;
 
   OperationResponseData mesg(OperationRequestData& request,
                              uint32_t sessionId,
-                             uint32_t transactionId);
+                             uint32_t transactionId) override;
 
  private:
   std::unique_ptr<Socket> commandSocket;
   std::unique_ptr<Socket> eventSocket;
   std::array<uint8_t, 16> guid;
   std::string name;
-
-  void sendPacket(std::unique_ptr<Socket>& socket, Packet& packet);
-  void recvPacket(std::unique_ptr<Socket>& socket, Buffer& buffer);
   OperationResponseData transaction(OperationRequestData& request,
                                     uint32_t sessionId,
                                     uint32_t transactionId,

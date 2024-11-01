@@ -1,5 +1,41 @@
 #include "ip.h"
 
+void Socket::sendPacket(Packet& packet) {
+  Buffer buffer = packet.pack();
+
+  int targetBytes = buffer.size();
+  int actualBytes = send(buffer);
+  if (actualBytes < targetBytes)
+    throw PTPTransportException(
+        std::format("Socket unable to send packet ({}/{} bytes sent).",
+                    actualBytes, targetBytes)
+            .c_str());
+}
+
+void Socket::recvPacket(Buffer& buffer) {
+  Packet packet;
+  buffer.clear();
+
+  int targetBytes = sizeof(packet.length);
+  int actualBytes = recv(buffer, targetBytes);
+  if (actualBytes < targetBytes)
+    throw PTPTransportException(
+        std::format("Socket timed out while receiving packet length ({}/{} "
+                    "bytes received).",
+                    actualBytes, targetBytes)
+            .c_str());
+
+  packet.unpack(buffer);
+  targetBytes = packet.length - sizeof(packet.length);
+  actualBytes = recv(buffer, targetBytes);
+  if (actualBytes < targetBytes)
+    throw PTPTransportException(
+        std::format("Socket timed out while receiving packet body ({}/{} "
+                    "bytes received).",
+                    actualBytes, targetBytes)
+            .c_str());
+}
+
 PTPIP::PTPIP(std::array<uint8_t, 16> clientGuid,
              std::string clientName,
              std::unique_ptr<Socket> commandSocket,
@@ -19,8 +55,8 @@ PTPIP::PTPIP(std::array<uint8_t, 16> clientGuid,
   Buffer response;
 
   InitCommandRequest initCmdReq(clientGuid, clientName);
-  sendPacket(commandSocket, initCmdReq);
-  recvPacket(commandSocket, response);
+  commandSocket->sendPacket(initCmdReq);
+  commandSocket->recvPacket(response);
   auto initCmdAck = Packet::unpackAs<InitCommandAck>(response);
 
   if (!initCmdAck) {
@@ -40,8 +76,8 @@ PTPIP::PTPIP(std::array<uint8_t, 16> clientGuid,
     throw PTPTransportException("Unable to connect event socket.");
 
   InitEventRequest initEvtReq(initCmdAck->connectionNum);
-  sendPacket(eventSocket, initEvtReq);
-  recvPacket(eventSocket, response);
+  eventSocket->sendPacket(initEvtReq);
+  eventSocket->recvPacket(response);
   auto initEvtAck = Packet::unpackAs<InitEventAck>(response);
 
   if (!initEvtAck) {
@@ -55,42 +91,6 @@ PTPIP::PTPIP(std::array<uint8_t, 16> clientGuid,
   }
 }
 
-void PTPIP::sendPacket(std::unique_ptr<Socket>& socket, Packet& packet) {
-  Buffer buffer = packet.pack();
-
-  int targetBytes = buffer.size();
-  int actualBytes = socket->send(buffer);
-  if (actualBytes < targetBytes)
-    throw PTPTransportException(
-        std::format("Socket unable to send packet ({}/{} bytes sent).",
-                    actualBytes, targetBytes)
-            .c_str());
-}
-
-void PTPIP::recvPacket(std::unique_ptr<Socket>& socket, Buffer& buffer) {
-  Packet packet;
-  buffer.clear();
-
-  int targetBytes = sizeof(packet.length);
-  int actualBytes = socket->recv(buffer, targetBytes);
-  if (actualBytes < targetBytes)
-    throw PTPTransportException(
-        std::format("Socket timed out while receiving packet length ({}/{} "
-                    "bytes received).",
-                    actualBytes, targetBytes)
-            .c_str());
-
-  packet.unpack(buffer);
-  targetBytes = packet.length - sizeof(packet.length);
-  actualBytes = socket->recv(buffer, targetBytes);
-  if (actualBytes < targetBytes)
-    throw PTPTransportException(
-        std::format("Socket timed out while receiving packet body ({}/{} "
-                    "bytes received).",
-                    actualBytes, targetBytes)
-            .c_str());
-}
-
 OperationResponseData PTPIP::transaction(OperationRequestData& request,
                                          uint32_t sessionId,
                                          uint32_t transactionId,
@@ -100,21 +100,21 @@ OperationResponseData PTPIP::transaction(OperationRequestData& request,
 
   OperationRequest opReq(static_cast<uint32_t>(dataPhaseInfo),
                          request.operationCode, transactionId, request.params);
-  sendPacket(commandSocket, opReq);
+  commandSocket->sendPacket(opReq);
 
   if (dataPhaseInfo == DataPhaseInfo::DataOut) {
     StartData startData(transactionId, request.data.size());
-    sendPacket(commandSocket, startData);
+    commandSocket->sendPacket(startData);
 
     EndData endData(transactionId, request.data);
-    sendPacket(commandSocket, endData);
+    commandSocket->sendPacket(endData);
   }
 
   Buffer payload;
   uint64_t totalDataLength = 0;
   while (true) {
     Buffer response;
-    recvPacket(commandSocket, response);
+    commandSocket->recvPacket(response);
 
     // TODO: Validate transactionId?
     if (auto opRes = Packet::unpackAs<OperationResponse>(response)) {
