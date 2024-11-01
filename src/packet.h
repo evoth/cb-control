@@ -23,10 +23,10 @@ concept ChoiceType =
 
 // TODO: Static method to return value while unpacking without needing
 // instance
-class IField {
+class Field {
  public:
-  IField() : lengthRef(length) {}
-  IField(uint32_t& lengthRef) : lengthRef(lengthRef) {}
+  Field() : lengthRef(length) {}
+  Field(uint32_t& lengthRef) : lengthRef(lengthRef) {}
 
   virtual void pack(Buffer& buffer, int& offset) = 0;
   virtual void unpack(Buffer& buffer, int& offset) = 0;
@@ -38,7 +38,7 @@ class IField {
 
 // TODO: Restrict template
 template <std::unsigned_integral T>
-class Primitive : public IField {
+class Primitive : public Field {
  public:
   Primitive(T& value) : value(value) {}
 
@@ -79,10 +79,10 @@ class Primitive : public IField {
 };
 
 template <std::unsigned_integral T>
-class Vector : public IField {
+class Vector : public Field {
  public:
   Vector(std::vector<T>& values, uint32_t& lengthRef)
-      : IField(lengthRef), values(values) {}
+      : Field(lengthRef), values(values) {}
 
  protected:
   void pack(Buffer& buffer, int& offset) override {
@@ -106,7 +106,7 @@ class Vector : public IField {
 };
 
 template <std::unsigned_integral T, size_t N>
-class Array : public IField {
+class Array : public Field {
  public:
   Array(std::array<T, N>& values) : values(values) {}
 
@@ -125,7 +125,7 @@ class Array : public IField {
   std::array<T, N>& values;
 };
 
-class String : public IField {
+class String : public Field {
  public:
   String(std::string& value) : value(value) {}
 
@@ -162,7 +162,7 @@ class String : public IField {
 // TODo: Figure out better way or simplify
 template <typename T, typename... Args>
   requires ChoiceType<T, Args...>
-class ChoiceVector : public IField {
+class ChoiceVector : public Field {
  public:
   ChoiceVector(std::vector<std::unique_ptr<T>>& values) : values(values) {}
 
@@ -212,9 +212,9 @@ class ChoiceVector : public IField {
 };
 
 // TODO: The overloading on field is kind of fun but hurts readability
-class Packet : public IField {
+class Packet : public Field {
  public:
-  using IField::length;
+  using Field::length;
 
   Packet(uint32_t defaultType = 0) : type(defaultType) {
     field();
@@ -223,18 +223,18 @@ class Packet : public IField {
 
   void pack(Buffer& buffer, int& offset) override {
     int startOffset = offset;
-    for (std::unique_ptr<IField>& field : fields)
+    for (std::unique_ptr<Field>& field : fields)
       field->pack(buffer, offset);
 
     lengthRef = offset - startOffset;
 
     offset = startOffset;
-    for (std::unique_ptr<IField>& field : fields)
+    for (std::unique_ptr<Field>& field : fields)
       field->pack(buffer, offset);
   };
 
   void unpack(Buffer& buffer, int& offset) override {
-    for (std::unique_ptr<IField>& field : fields)
+    for (std::unique_ptr<Field>& field : fields)
       field->unpack(buffer, offset);
   };
 
@@ -311,7 +311,7 @@ class Packet : public IField {
   }
 
  private:
-  std::vector<std::unique_ptr<IField>> fields;
+  std::vector<std::unique_ptr<Field>> fields;
 };
 
 #endif

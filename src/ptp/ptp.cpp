@@ -1,5 +1,4 @@
 #include "ptp.h"
-#include "ptpEnums.h"
 
 OperationResponseData PTPExtension::send(OperationRequestData& request) {
   transport->send(request, getSessionId(), getTransactionId());

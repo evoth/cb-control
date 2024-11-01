@@ -4,9 +4,71 @@
 #include "../packet.h"
 #include "ptp.h"
 
-#include <queue>
+// Ideally, these should not throw any exceptions
+// If send/recv are called when not connected, they should return 0
+class Socket {
+ public:
+  virtual bool connect(std::string ip, int port) = 0;
+  virtual bool close() = 0;
+  virtual bool isConnected() = 0;
+  virtual int send(Buffer& buffer) = 0;
+  // Should attempt to append `length` bytes to the buffer, waiting until enough
+  // bytes have accumulated or `timeoutMs` milliseconds have passed
+  virtual int recv(Buffer& buffer, int length, int timeoutMs = 1000) = 0;
+};
+
+enum DataPhaseInfo {
+  Unknown = 0x00,
+  DataIn = 0x01,
+  DataOut = 0x02,
+};
 
 // TODO: Figure out where to catch and deal with exceptions
+class PTPIP : public PTPTransport {
+ public:
+  PTPIP(std::array<uint8_t, 16> clientGuid,
+        std::string clientName,
+        std::unique_ptr<Socket> commandSocket,
+        std::unique_ptr<Socket> eventSocket,
+        std::string ip,
+        int port = 15740);
+
+  ~PTPIP() {
+    commandSocket->close();
+    eventSocket->close();
+  }
+
+  bool isOpen() override {
+    return commandSocket->isConnected() && eventSocket->isConnected();
+  };
+
+  OperationResponseData send(OperationRequestData& request,
+                             uint32_t sessionId,
+                             uint32_t transactionId);
+
+  OperationResponseData recv(OperationRequestData& request,
+                             uint32_t sessionId,
+                             uint32_t transactionId);
+
+  OperationResponseData mesg(OperationRequestData& request,
+                             uint32_t sessionId,
+                             uint32_t transactionId);
+
+ private:
+  std::unique_ptr<Socket> commandSocket;
+  std::unique_ptr<Socket> eventSocket;
+  std::array<uint8_t, 16> guid;
+  std::string name;
+
+  void sendPacket(std::unique_ptr<Socket>& socket, Packet& packet);
+  void recvPacket(std::unique_ptr<Socket>& socket, Buffer& buffer);
+  OperationResponseData operation(OperationRequestData& request,
+                                  uint32_t sessionId,
+                                  uint32_t transactionId,
+                                  DataPhaseInfo dataPhaseInfo);
+};
+
+/* PTP/IP Packets */
 
 class InitCommandRequest : public Packet {
  public:
@@ -41,7 +103,7 @@ class InitEventRequest : public Packet {
  public:
   uint32_t connectionNum = 0;
 
-  InitEventRequest(uint32_t connectionNum)
+  InitEventRequest(uint32_t connectionNum = 0)
       : Packet(0x03), connectionNum(connectionNum) {
     field(this->connectionNum);
   }
@@ -66,10 +128,10 @@ class OperationRequest : public Packet {
   uint32_t transactionId = 0;
   std::array<uint32_t, 5> params = {};
 
-  OperationRequest(uint32_t dataPhase,
-                   uint16_t operationCode,
-                   uint32_t transactionId,
-                   std::array<uint32_t, 5> params)
+  OperationRequest(uint32_t dataPhase = 0,
+                   uint16_t operationCode = 0,
+                   uint32_t transactionId = 0,
+                   std::array<uint32_t, 5> params = {})
       : Packet(0x06),
         dataPhase(dataPhase),
         operationCode(operationCode),
@@ -95,7 +157,18 @@ class OperationResponse : public Packet {
   }
 };
 
-// TODO: Event
+class Event : public Packet {
+ public:
+  uint16_t eventCode = 0;
+  uint32_t transactionId = 0;
+  std::array<uint32_t, 3> params = {};
+
+  Event() : Packet(0x08) {
+    field(this->eventCode);
+    field(this->transactionId);
+    field(this->params);
+  }
+};
 
 class StartData : public Packet {
  public:
@@ -108,160 +181,47 @@ class StartData : public Packet {
   }
 };
 
-// TODO: Data, Cancel
+class Data : public Packet {
+ public:
+  uint32_t transactionId = 0;
+  uint32_t payloadLength = 0;  // Must be set manually for correct unpacking
+  Buffer payload;
+
+  Data(uint32_t payloadLength = 0)
+      : Packet(0x0a), payloadLength(payloadLength) {
+    field(this->transactionId);
+    field(this->payload, payloadLength);
+  }
+};
+
+class Cancel : public Packet {
+ public:
+  uint32_t transactionId = 0;
+
+  Cancel() : Packet(0x0b) { field(this->transactionId); }
+};
 
 class EndData : public Packet {
  public:
   uint32_t transactionId = 0;
-  uint64_t totalDataLength = 0;
+  uint32_t payloadLength = 0;  // Must be set manually for correct unpacking
+  Buffer payload;
 
-  EndData() : Packet(0x0c) {
+  EndData(uint32_t payloadLength = 0)
+      : Packet(0x0c), payloadLength(payloadLength) {
     field(this->transactionId);
-    field(this->totalDataLength);
+    field(this->payload, payloadLength);
   }
 };
 
-// TODO: Ping, Pong
-
-// Ideally, these should not throw any exceptions
-// If send/recv are called when not connected, they should return 0
-class Socket {
+class Ping : public Packet {
  public:
-  virtual bool connect(std::string ip, int port) = 0;
-  virtual bool close() = 0;
-  virtual bool isConnected() = 0;
-  virtual int send(Buffer& buffer) = 0;
-  // Should attempt to append `length` bytes to the buffer, waiting until enough
-  // bytes have accumulated or `timeoutMs` milliseconds have passed
-  virtual int recv(Buffer& buffer, int length, int timeoutMs = 1000) = 0;
+  Ping() : Packet(0x0d) {}
 };
 
-// TODO: Move stuff into implementation file
-class PTPIP : public PTPTransport {
+class Pong : public Packet {
  public:
-  PTPIP(std::array<uint8_t, 16> clientGuid,
-        std::string clientName,
-        std::unique_ptr<Socket> commandSocket,
-        std::unique_ptr<Socket> eventSocket,
-        std::string ip,
-        int port = 15740)
-      : commandSocket(std::move(commandSocket)),
-        eventSocket(std::move(eventSocket)) {
-    if (!commandSocket)
-      throw PTPTransportException("No command socket provided.");
-    if (!eventSocket)
-      throw PTPTransportException("No event socket provided.");
-
-    if (!commandSocket->connect(ip, port))
-      throw PTPTransportException("Unable to connect command socket.");
-
-    Buffer response;
-
-    InitCommandRequest initCmdReq(clientGuid, clientName);
-    sendPacket(commandSocket, initCmdReq);
-    recvPacket(commandSocket, response);
-    auto initCmdAck = Packet::unpackAs<InitCommandAck>(response);
-
-    if (!initCmdAck) {
-      // TODO: Move to helper function to avoid duplication?
-      if (auto initFail = Packet::unpackAs<InitFail>(response))
-        throw PTPTransportException(
-            std::format("Init Fail (reason code {:#04x})", initFail->reason)
-                .c_str());
-      throw PTPTransportException("Unexpected packet type.");
-    }
-
-    guid = initCmdAck->guid;
-    name = initCmdAck->name;
-
-    if (!eventSocket->connect(ip, port))
-      throw PTPTransportException("Unable to connect event socket.");
-
-    InitEventRequest initEvtReq(initCmdAck->connectionNum);
-    sendPacket(eventSocket, initEvtReq);
-    recvPacket(eventSocket, response);
-    auto initEvtAck = Packet::unpackAs<InitEventAck>(response);
-
-    if (!initEvtAck) {
-      // TODO: Move to helper function to avoid duplication?
-      if (auto initFail = Packet::unpackAs<InitFail>(response))
-        throw PTPTransportException(
-            std::format("Init Fail (reason code {:#04x})", initFail->reason)
-                .c_str());
-      throw PTPTransportException("Unexpected packet type.");
-    }
-  }
-
-  ~PTPIP() {
-    commandSocket->close();
-    eventSocket->close();
-  }
-
-  bool isOpen() override {
-    return commandSocket->isConnected() && eventSocket->isConnected();
-  };
-
-  OperationResponseData send(OperationRequestData& request,
-                             uint32_t sessionId,
-                             uint32_t transactionId) override {
-    // TODO:
-    // if (!isOpen())
-    //   throw PTPTransportException("Transport is not open.");
-  }
-
-  OperationResponseData recv(OperationRequestData& request,
-                             uint32_t sessionId,
-                             uint32_t transactionId) override {
-    // TODO:
-  }
-
-  OperationResponseData mesg(OperationRequestData& request,
-                             uint32_t sessionId,
-                             uint32_t transactionId) override {
-    // TODO:
-  }
-
- private:
-  std::unique_ptr<Socket> commandSocket;
-  std::unique_ptr<Socket> eventSocket;
-  std::array<uint8_t, 16> guid;
-  std::string name;
-
-  void sendPacket(std::unique_ptr<Socket>& socket, Packet& packet) {
-    Buffer buffer = packet.pack();
-
-    int targetBytes = buffer.size();
-    int actualBytes = socket->send(buffer);
-    if (actualBytes < targetBytes)
-      throw PTPTransportException(
-          std::format("Socket unable to send packet ({}/{} bytes sent).",
-                      actualBytes, targetBytes)
-              .c_str());
-  }
-
-  void recvPacket(std::unique_ptr<Socket>& socket, Buffer& buffer) {
-    Packet packet;
-    buffer.clear();
-
-    int targetBytes = sizeof(packet.length);
-    int actualBytes = socket->recv(buffer, targetBytes);
-    if (actualBytes < targetBytes)
-      throw PTPTransportException(
-          std::format("Socket timed out while receiving packet length ({}/{} "
-                      "bytes received).",
-                      actualBytes, targetBytes)
-              .c_str());
-
-    packet.unpack(buffer);
-    targetBytes = packet.length - targetBytes;
-    actualBytes = socket->recv(buffer, targetBytes);
-    if (actualBytes < targetBytes)
-      throw PTPTransportException(
-          std::format("Socket timed out while receiving packet body ({}/{} "
-                      "bytes received).",
-                      actualBytes, targetBytes)
-              .c_str());
-  }
+  Pong() : Packet(0x0e) {}
 };
 
 #endif
