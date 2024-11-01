@@ -17,7 +17,7 @@ class Socket {
   virtual int recv(Buffer& buffer, int length, int timeoutMs = 1000) = 0;
 };
 
-enum DataPhaseInfo {
+enum DataPhaseInfo : uint32_t {
   Unknown = 0x00,
   DataIn = 0x01,
   DataOut = 0x02,
@@ -62,10 +62,10 @@ class PTPIP : public PTPTransport {
 
   void sendPacket(std::unique_ptr<Socket>& socket, Packet& packet);
   void recvPacket(std::unique_ptr<Socket>& socket, Buffer& buffer);
-  OperationResponseData operation(OperationRequestData& request,
-                                  uint32_t sessionId,
-                                  uint32_t transactionId,
-                                  DataPhaseInfo dataPhaseInfo);
+  OperationResponseData transaction(OperationRequestData& request,
+                                    uint32_t sessionId,
+                                    uint32_t transactionId,
+                                    DataPhaseInfo dataPhaseInfo);
 };
 
 /* PTP/IP Packets */
@@ -175,7 +175,10 @@ class StartData : public Packet {
   uint32_t transactionId = 0;
   uint64_t totalDataLength = 0;
 
-  StartData() : Packet(0x09) {
+  StartData(uint32_t transactionId = 0, uint64_t totalDataLength = 0)
+      : Packet(0x09),
+        transactionId(transactionId),
+        totalDataLength(totalDataLength) {
     field(this->transactionId);
     field(this->totalDataLength);
   }
@@ -184,13 +187,11 @@ class StartData : public Packet {
 class Data : public Packet {
  public:
   uint32_t transactionId = 0;
-  uint32_t payloadLength = 0;  // Must be set manually for correct unpacking
   Buffer payload;
 
-  Data(uint32_t payloadLength = 0)
-      : Packet(0x0a), payloadLength(payloadLength) {
+  Data() : Packet(0x0a) {
     field(this->transactionId);
-    field(this->payload, payloadLength);
+    field(this->payload);  // Greedy; consumes to end of buffer when unpacking
   }
 };
 
@@ -204,13 +205,12 @@ class Cancel : public Packet {
 class EndData : public Packet {
  public:
   uint32_t transactionId = 0;
-  uint32_t payloadLength = 0;  // Must be set manually for correct unpacking
   Buffer payload;
 
-  EndData(uint32_t payloadLength = 0)
-      : Packet(0x0c), payloadLength(payloadLength) {
+  EndData(uint32_t transactionId = 0, Buffer payload = {})
+      : Packet(0x0c), transactionId(transactionId), payload(payload) {
     field(this->transactionId);
-    field(this->payload, payloadLength);
+    field(this->payload);  // Greedy; consumes to end of buffer when unpacking
   }
 };
 

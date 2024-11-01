@@ -29,7 +29,8 @@ PTPIP::PTPIP(std::array<uint8_t, 16> clientGuid,
       throw PTPTransportException(
           std::format("Init Fail (reason code {:#04x})", initFail->reason)
               .c_str());
-    throw PTPTransportException("Unexpected packet type.");
+    throw PTPTransportException(
+        "Unexpected packet type while initializing connection.");
   }
 
   this->guid = initCmdAck->guid;
@@ -49,7 +50,8 @@ PTPIP::PTPIP(std::array<uint8_t, 16> clientGuid,
       throw PTPTransportException(
           std::format("Init Fail (reason code {:#04x})", initFail->reason)
               .c_str());
-    throw PTPTransportException("Unexpected packet type.");
+    throw PTPTransportException(
+        "Unexpected packet type while initializing connection.");
   }
 }
 
@@ -89,29 +91,71 @@ void PTPIP::recvPacket(std::unique_ptr<Socket>& socket, Buffer& buffer) {
             .c_str());
 }
 
-OperationResponseData PTPIP::operation(OperationRequestData& request,
-                                       uint32_t sessionId,
-                                       uint32_t transactionId,
-                                       DataPhaseInfo dataPhaseInfo) {
-  // TODO:
-  // if (!isOpen())
-  //   throw PTPTransportException("Transport is not open.");
+OperationResponseData PTPIP::transaction(OperationRequestData& request,
+                                         uint32_t sessionId,
+                                         uint32_t transactionId,
+                                         DataPhaseInfo dataPhaseInfo) {
+  if (!isOpen())
+    throw PTPTransportException("Transport is not open.");
+
+  OperationRequest opReq(static_cast<uint32_t>(dataPhaseInfo),
+                         request.operationCode, transactionId, request.params);
+  sendPacket(commandSocket, opReq);
+
+  if (dataPhaseInfo == DataPhaseInfo::DataOut) {
+    StartData startData(transactionId, request.data.size());
+    sendPacket(commandSocket, startData);
+
+    EndData endData(transactionId, request.data);
+    sendPacket(commandSocket, endData);
+  }
+
+  Buffer payload;
+  uint64_t totalDataLength = 0;
+  while (true) {
+    Buffer response;
+    recvPacket(commandSocket, response);
+
+    // TODO: Validate transactionId?
+    if (auto opRes = Packet::unpackAs<OperationResponse>(response)) {
+      // TODO: Replace with warnings?
+      if (dataPhaseInfo == DataPhaseInfo::DataOut && payload.size() > 0)
+        throw PTPTransportException(
+            "Unexpected Data-In phase during Data-Out transaction.");
+      if (payload.size() != totalDataLength)
+        throw PTPTransportException(
+            std::format("Wrong amount of data in transaction data phase ({}/{} "
+                        "bytes received).",
+                        payload.size(), totalDataLength)
+                .c_str());
+      return OperationResponseData(opRes->responseCode, opRes->params, payload);
+    } else if (auto startData = Packet::unpackAs<StartData>(response)) {
+      totalDataLength = startData->totalDataLength;
+    } else if (auto data = Packet::unpackAs<Data>(response)) {
+      payload.insert(payload.end(), data->payload.begin(), data->payload.end());
+    } else if (auto endData = Packet::unpackAs<EndData>(response)) {
+      payload.insert(payload.end(), endData->payload.begin(),
+                     endData->payload.end());
+    } else {
+      throw PTPTransportException("Unexpected packet type during transaction.");
+    }
+  }
 }
 
 OperationResponseData PTPIP::send(OperationRequestData& request,
                                   uint32_t sessionId,
                                   uint32_t transactionId) {
-  return operation(request, sessionId, transactionId, DataPhaseInfo::DataOut);
+  return transaction(request, sessionId, transactionId, DataPhaseInfo::DataOut);
 }
 
 OperationResponseData PTPIP::recv(OperationRequestData& request,
                                   uint32_t sessionId,
                                   uint32_t transactionId) {
-  return operation(request, sessionId, transactionId, DataPhaseInfo::DataIn);
+  return transaction(request, sessionId, transactionId, DataPhaseInfo::DataIn);
 }
 
 OperationResponseData PTPIP::mesg(OperationRequestData& request,
                                   uint32_t sessionId,
                                   uint32_t transactionId) {
-  return operation(request, sessionId, transactionId, DataPhaseInfo::DataIn);
+  return transaction(request, sessionId, transactionId, DataPhaseInfo::DataIn);
 }

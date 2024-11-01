@@ -48,26 +48,26 @@ struct EventData {
 };
 
 struct OperationRequestData {
-  const uint32_t operationCode;
+  const uint16_t operationCode;
   const std::array<uint32_t, 5> params;
   const std::vector<unsigned char> data;
 
-  OperationRequestData(uint32_t operationCode,
+  OperationRequestData(uint16_t operationCode,
                        std::array<uint32_t, 5> params = {},
                        std::vector<unsigned char> data = {})
-      : operationCode(operationCode), params(params), data(data) {}
+      : operationCode(operationCode), params(params), data(std::move(data)) {}
 };
 
 struct OperationResponseData {
-  const uint32_t responseCode;
+  const uint16_t responseCode;
   const std::array<uint32_t, 5> params;
   const std::vector<unsigned char> data;
   // const std::vector<std::unique_ptr<EventData>> events;
 
-  OperationResponseData(uint32_t responseCode,
+  OperationResponseData(uint16_t responseCode,
                         std::array<uint32_t, 5> params = {},
                         std::vector<unsigned char> data = {})
-      : responseCode(responseCode), params(params), data(data) {}
+      : responseCode(responseCode), params(params), data(std::move(data)) {}
 };
 
 class PTPTransport {
@@ -118,8 +118,12 @@ class PTPExtension {
 };
 
 /* PTP Enums */
+// TODO: Figure out a cleaner way to do this? An OperationCode should be easily
+// comparable against uint16_t and passed as uint16_t to functions because
+// different PTPExtensions will have vendor-specific operation codes
 
-enum OperationCode {
+namespace OperationCode {
+enum OperationCode : uint16_t {
   Undefined = 0x1000,
   GetDeviceInfo = 0x1001,
   OpenSession = 0x1002,
@@ -159,8 +163,10 @@ enum OperationCode {
   GetStreamInfo = 0x1024,
   GetStream = 0x1025,
 };
+}
 
-enum ResponseCode {
+namespace ResponseCode {
+enum ResponseCode : uint16_t {
   Undefined = 0x2000,
   OK = 0x2001,
   GeneralError = 0x2002,
@@ -198,5 +204,6 @@ enum ResponseCode {
   NoStreamEnabled = 0x2022,
   InvalidDataset = 0x2023,
 };
+}
 
 #endif

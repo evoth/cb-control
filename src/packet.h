@@ -82,19 +82,21 @@ template <std::unsigned_integral T>
 class Vector : public Field {
  public:
   Vector(std::vector<T>& values, uint32_t& lengthRef)
-      : Field(lengthRef), values(values) {}
+      : Field(lengthRef), values(values), greedy(false) {}
+  Vector(std::vector<T>& values) : values(values), greedy(true) {}
 
  protected:
   void pack(Buffer& buffer, int& offset) override {
     for (T& value : values)
       Primitive<T>(value).pack(buffer, offset);
 
-    lengthRef = values.size();
+    if (!greedy)
+      lengthRef = values.size();
   }
 
   void unpack(Buffer& buffer, int& offset) override {
     values.clear();
-    for (int i = 0; i < lengthRef; i++) {
+    for (int i = 0; greedy ? (offset < buffer.size()) : (i < lengthRef); i++) {
       T value;
       Primitive<T>(value).unpack(buffer, offset);
       values.push_back(value);
@@ -103,6 +105,7 @@ class Vector : public Field {
 
  private:
   std::vector<T>& values;
+  bool greedy;
 };
 
 template <std::unsigned_integral T, size_t N>
@@ -276,36 +279,45 @@ class Packet : public Field {
  protected:
   uint32_t type = 0;
 
+  // Primitive (only unsigned int for now)
   template <std::unsigned_integral T>
   void field(T& value) {
     fields.push_back(std::make_unique<Primitive<T>>(value));
   }
 
+  // Non-greedy vector (length determined by lengthRef)
   template <std::unsigned_integral T>
   void field(std::vector<T>& values, uint32_t& lengthRef) {
     fields.push_back(std::make_unique<Vector<T>>(values, lengthRef));
   }
 
+  // Greedy vector (consumes until end of buffer when unpacking)
+  template <std::unsigned_integral T>
+  void field(std::vector<T>& values) {
+    fields.push_back(std::make_unique<Vector<T>>(values));
+  }
+
+  // Fixed-length array
   template <std::unsigned_integral T, size_t N>
   void field(std::array<T, N>& values) {
     fields.push_back(std::make_unique<Array<T, N>>(values));
   }
 
+  // String (encoded as 16 bits/char to emulate Unicode as in PTP/IP)
   void field(std::string& value) {
     fields.push_back(std::make_unique<String>(value));
   }
 
+  // Vector of packets which share a base type, which are dynamically unpacked
+  // into respective object instances based on default value of the type field
   template <typename T, typename... Args>
     requires ChoiceType<T, Args...>
   void field(std::vector<std::unique_ptr<T>>& values) {
     fields.push_back(std::make_unique<ChoiceVector<T, Args...>>(values));
   }
 
-  // template <typename... Args>
-  // void fields(Args... args) {
-  //   (field(args), ...);
-  // }
-
+  // Special length field which is automatically populated with the packet
+  // length when unpacking
   void field() {
     fields.push_back(std::make_unique<Primitive<uint32_t>>(lengthRef));
   }
