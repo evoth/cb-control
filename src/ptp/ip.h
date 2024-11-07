@@ -19,7 +19,9 @@ class Socket {
   virtual int send(Buffer& buffer) = 0;
   // Should attempt to append `length` bytes to the buffer, waiting until enough
   // bytes have accumulated or `timeoutMs` milliseconds have passed
-  virtual int recv(Buffer& buffer, int length, int timeoutMs = 1000) = 0;
+  virtual int recv(Buffer& buffer,
+                   int length,
+                   unsigned int timeoutMs = 1000) = 0;
 };
 
 enum DataPhaseInfo : uint32_t {

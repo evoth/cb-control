@@ -1,113 +1,145 @@
 #include "ptp/ip.h"
 
+#include <stdio.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <chrono>
 #include <iomanip>
 #include <iostream>
 
-int main() {
-  InitCommandRequest initCommandRequest(
-      {0x4d, 0xc4, 0x79, 0xe1, 0xc1, 0x0e, 0x46, 0x27, 0x9e, 0xe1, 0x1b, 0x2a,
-       0xbc, 0xe2, 0xda, 0x29},
-      "iPhone");
-  Buffer buff = initCommandRequest.pack();
-  std::cout << std::endl;
-  int i = 0;
-  for (auto& e : buff) {
-    std::cout << std::hex << std::setfill('0') << std::setw(2) << +e
-              << std::resetiosflags(std::ios::hex) << " ";
-    i++;
-    if (i % 16 == 8)
-      std::cout << " ";
-    if (i % 16 == 0)
-      std::cout << std::endl;
+#pragma comment(lib, "Ws2_32.lib")
+
+#define SOCKET_BUFF_SIZE 512
+
+// TODO: Figure out error logging
+class WindowsSocket : public Socket {
+ public:
+  WindowsSocket() {
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+      throw PTPTransportException("WSAStartup failed in socket constructor.");
   }
-  std::cout << std::endl << std::endl;
 
-  InitCommandRequest initCommandRequest2;
-  initCommandRequest2.unpack(buff);
-  std::cout << initCommandRequest2.name << std::endl;
+  ~WindowsSocket() {
+    closesocket(clientSocket);
+    WSACleanup();
+  }
 
+  bool connect(std::string ip, int port) override {
+    close();
+
+    clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (clientSocket == INVALID_SOCKET)
+      return false;
+
+    SOCKADDR_IN serverAddress;
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_addr.s_addr = inet_addr(ip.c_str());
+    serverAddress.sin_port = htons(port);
+
+    if (::connect(clientSocket, (SOCKADDR*)&serverAddress,
+                  sizeof(serverAddress)) == SOCKET_ERROR) {
+      close();
+      return false;
+    }
+  }
+
+  bool close() override {
+    int result = closesocket(clientSocket);
+    clientSocket = INVALID_SOCKET;
+    return result == 0;
+  }
+
+  bool isConnected() override { return clientSocket != INVALID_SOCKET; }
+
+  int send(Buffer& buffer) override {
+    // Send in blocks of SOCKET_BUFF_SIZE bytes
+    int totalSent = 0;
+    while (totalSent < buffer.size()) {
+      // Read block from `buffer` (byte vector) into `buff` (char array)
+      int buffBytes = 0;
+      while (buffBytes < SOCKET_BUFF_SIZE &&
+             totalSent + buffBytes < buffer.size()) {
+        buff[buffBytes] = buffer[totalSent + buffBytes];
+        buffBytes++;
+      }
+
+      // Repeatedly send() until current block has been fully sent
+      int sentBytes = 0;
+      while (sentBytes < buffBytes) {
+        int result =
+            ::send(clientSocket, buff + sentBytes, buffBytes - sentBytes, 0);
+
+        // TODO: Close socket (or mark as closed) if appropriate
+        if (result == SOCKET_ERROR)
+          return totalSent + sentBytes;
+
+        sentBytes += result;
+      }
+
+      totalSent += buffBytes;
+    }
+
+    return totalSent;
+  }
+
+  int recv(Buffer& buffer, int length, unsigned int timeoutMs = 1000) override {
+    auto now = std::chrono::steady_clock::now();
+    auto endTime = now + std::chrono::milliseconds(timeoutMs);
+
+    fd_set readfds;
+    FD_ZERO(&readfds);
+
+    // We read blocks of up to SOCKET_BUFF_SIZE into the buffer until we reach
+    // `length` bytes or timeout. Using a do/while loop so that we always try to
+    // recv() at least once, regardless of timeout/length.
+    int totalReceived = 0;
+    do {
+      auto timeoutDelta = endTime - now;
+      timeval timeout;
+      timeout.tv_sec =
+          std::chrono::duration_cast<std::chrono::seconds>(timeoutDelta)
+              .count();
+      timeout.tv_usec =
+          std::chrono::duration_cast<std::chrono::microseconds>(timeoutDelta)
+              .count() %
+          1000000;
+
+      FD_ZERO(&readfds);
+      FD_SET(clientSocket, &readfds);
+
+      // TODO: More granular error handling
+      int status = select(0, &readfds, NULL, NULL, &timeout);
+      if (status == SOCKET_ERROR || status == 0 ||
+          !FD_ISSET(clientSocket, &readfds))
+        return totalReceived;
+
+      int buffBytes = length - totalReceived;
+      if (buffBytes > SOCKET_BUFF_SIZE)
+        buffBytes = SOCKET_BUFF_SIZE;
+
+      int result = ::recv(clientSocket, buff, buffBytes, 0);
+
+      // TODO: Close socket (or mark as closed) if appropriate
+      if (result == SOCKET_ERROR)
+        return totalReceived;
+
+      for (int i = 0; i < result; i++) {
+        buffer.push_back(buff[i]);
+      }
+
+      totalReceived += result;
+      now = std::chrono::steady_clock::now();
+    } while (totalReceived < length && now < endTime);
+
+    return totalReceived;
+  }
+
+ private:
+  SOCKET clientSocket;
+  char buff[SOCKET_BUFF_SIZE];
+};
+
+int main() {
   return 0;
 }
-
-// class TestPacket : public Packet {
-//  public:
-//   uint32_t vecLen = 0;
-//   std::vector<uint32_t> vec;
-//   std::array<uint32_t, 2> arr = {44, 45};
-//   std::string s = "Hello Tim";
-//   TestPacket() : Packet(0x07) {
-//     field(vecLen);
-//     field(s);
-//     vec.push_back(23);
-//     vec.push_back(25);
-//     field(vec, vecLen);
-//     field(arr);
-//   }
-// };
-
-// class TestPacket2 : public Packet {
-//  public:
-//   TestPacket2() : Packet(0x08) {}
-// };
-
-// class TestPacket4 : public Packet {
-//  public:
-//   std::vector<std::unique_ptr<Packet>> vec;
-//   TestPacket4() : Packet(0x09) { field<Packet, TestPacket, TestPacket2>(vec);
-//   }
-// };
-
-// int main() {
-//   TestPacket4 tim;
-//   // tim.arr[1]->type = 0x05;
-//   tim.vec.push_back(std::make_unique<TestPacket2>());
-//   std::unique_ptr<TestPacket> oops = std::make_unique<TestPacket>();
-//   oops->arr[0] = 80;
-//   oops->s = "Tim";
-//   tim.vec.push_back(std::move(oops));
-//   Buffer buff = tim.pack();
-//   std::cout << std::endl;
-//   for (auto& e : buff) {
-//     std::cout << +e << std::endl;
-//   }
-
-//   TestPacket4 choiceTim;
-//   choiceTim.unpack(buff);
-//   if (TestPacket* newTim = dynamic_cast<TestPacket*>(choiceTim.vec[1].get()))
-//   {
-//     // newTim->arr[0] = 55;
-//     // newTim->unpack(buff);
-//     std::cout << std::endl
-//               << newTim->length << std::endl
-//               << newTim->type << std::endl
-//               << newTim->s << std::endl
-//               << newTim->arr[0] << std::endl
-//               << newTim->arr[1] << std::endl;
-//   } else {
-//     std::cout << "Oops" << std::endl;
-//   }
-
-//   // TestPacket4 tim;
-//   // tim.vec[0]->arr[0] = 1000;
-//   // tim.vec[1]->arr[1] = 2000;
-
-//   // Buffer buff = tim.pack();
-//   // std::cout << std::endl;
-//   // for (auto& e : buff) {
-//   //   std::cout << +e << std::endl;
-//   // }
-
-//   // TestPacket4 newTim;
-
-//   // newTim.unpack(buff);
-
-//   // newTim.vec[0]->arr[0] = 55;
-//   // newTim.unpack(buff);
-//   // std::cout << std::endl
-//   //           << newTim.length << std::endl
-//   //           << newTim.type << std::endl
-//   //           << newTim.vec[0]->arr[0] << std::endl
-//   //           << newTim.vec[1]->arr[1] << std::endl;
-
-//   return 0;
-// }
