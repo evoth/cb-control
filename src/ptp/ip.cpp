@@ -93,11 +93,13 @@ PTPIP::PTPIP(std::array<uint8_t, 16> clientGuid,
 
 OperationResponseData PTPIP::transaction(const OperationRequestData& request,
                                          uint32_t sessionId,
-                                         uint32_t transactionId,
-                                         DataPhaseInfo dataPhaseInfo) {
+                                         uint32_t transactionId) {
   if (!isOpen())
     throw PTPTransportException("Transport is not open.");
 
+  DataPhaseInfo dataPhaseInfo = (request.dataPhase && request.sending)
+                                    ? DataPhaseInfo::DataOut
+                                    : DataPhaseInfo::DataIn;
   OperationRequest opReq(static_cast<uint32_t>(dataPhaseInfo),
                          request.operationCode, transactionId, request.params);
   commandSocket->sendPacket(opReq);
@@ -106,6 +108,7 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request,
     StartData startData(transactionId, request.data.size());
     commandSocket->sendPacket(startData);
 
+    // TODO: Avoid copying request.data?
     EndData endData(transactionId, request.data);
     commandSocket->sendPacket(endData);
   }
@@ -140,22 +143,4 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request,
       throw PTPTransportException("Unexpected packet type during transaction.");
     }
   }
-}
-
-OperationResponseData PTPIP::send(const OperationRequestData& request,
-                                  uint32_t sessionId,
-                                  uint32_t transactionId) {
-  return transaction(request, sessionId, transactionId, DataPhaseInfo::DataOut);
-}
-
-OperationResponseData PTPIP::recv(const OperationRequestData& request,
-                                  uint32_t sessionId,
-                                  uint32_t transactionId) {
-  return transaction(request, sessionId, transactionId, DataPhaseInfo::DataIn);
-}
-
-OperationResponseData PTPIP::mesg(const OperationRequestData& request,
-                                  uint32_t sessionId,
-                                  uint32_t transactionId) {
-  return transaction(request, sessionId, transactionId, DataPhaseInfo::DataIn);
 }

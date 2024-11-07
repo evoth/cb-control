@@ -52,11 +52,19 @@ struct OperationRequestData {
   const uint16_t operationCode;
   const std::array<uint32_t, 5> params;
   const std::vector<unsigned char> data;
+  const bool dataPhase;
+  const bool sending;
 
   OperationRequestData(uint16_t operationCode,
+                       bool dataPhase,
+                       bool sending,
                        std::array<uint32_t, 5> params = {},
                        std::vector<unsigned char> data = {})
-      : operationCode(operationCode), params(params), data(std::move(data)) {}
+      : operationCode(operationCode),
+        dataPhase(dataPhase),
+        sending(sending),
+        params(params),
+        data(std::move(data)) {}
 };
 
 struct OperationResponseData {
@@ -80,15 +88,9 @@ class PTPTransport {
 
   virtual bool isOpen() = 0;
 
-  virtual OperationResponseData send(const OperationRequestData& request,
-                                     uint32_t sessionId,
-                                     uint32_t transactionId) = 0;
-  virtual OperationResponseData recv(const OperationRequestData& request,
-                                     uint32_t sessionId,
-                                     uint32_t transactionId) = 0;
-  virtual OperationResponseData mesg(const OperationRequestData& request,
-                                     uint32_t sessionId,
-                                     uint32_t transactionId) = 0;
+  virtual OperationResponseData transaction(const OperationRequestData& request,
+                                            uint32_t sessionId,
+                                            uint32_t transactionId) = 0;
 };
 
 class PTPExtension {

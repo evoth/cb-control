@@ -47,27 +47,15 @@ class PTPIP : public PTPTransport {
     return commandSocket->isConnected() && eventSocket->isConnected();
   };
 
-  OperationResponseData send(const OperationRequestData& request,
-                             uint32_t sessionId,
-                             uint32_t transactionId) override;
-
-  OperationResponseData recv(const OperationRequestData& request,
-                             uint32_t sessionId,
-                             uint32_t transactionId) override;
-
-  OperationResponseData mesg(const OperationRequestData& request,
-                             uint32_t sessionId,
-                             uint32_t transactionId) override;
+  OperationResponseData transaction(const OperationRequestData& request,
+                                    uint32_t sessionId,
+                                    uint32_t transactionId) override;
 
  private:
   std::unique_ptr<Socket> commandSocket;
   std::unique_ptr<Socket> eventSocket;
   std::array<uint8_t, 16> guid;
   std::string name;
-  OperationResponseData transaction(const OperationRequestData& request,
-                                    uint32_t sessionId,
-                                    uint32_t transactionId,
-                                    DataPhaseInfo dataPhaseInfo);
 };
 
 /* PTP/IP Packets */

@@ -1,14 +1,14 @@
 #include "ptp.h"
 
-// TODO: Prevent `data` from being copied so many times throughout the process
+// TODO: Avoid copying `data`?
 OperationResponseData PTPExtension::send(uint16_t operationCode,
                                          std::array<uint32_t, 5> params,
                                          std::vector<unsigned char> data) {
   std::lock_guard lock(transactionMutex);
 
-  OperationRequestData request(operationCode, params, data);
+  OperationRequestData request(operationCode, true, true, params, data);
   OperationResponseData response =
-      transport->send(request, getSessionId(), getTransactionId());
+      transport->transaction(request, getSessionId(), getTransactionId());
   if (response.responseCode != ResponseCode::OK)
     throw PTPOperationException(response.responseCode);
 
@@ -19,9 +19,9 @@ OperationResponseData PTPExtension::recv(uint16_t operationCode,
                                          std::array<uint32_t, 5> params) {
   std::lock_guard lock(transactionMutex);
 
-  OperationRequestData request(operationCode, params);
+  OperationRequestData request(operationCode, true, false, params);
   OperationResponseData response =
-      transport->recv(request, getSessionId(), getTransactionId());
+      transport->transaction(request, getSessionId(), getTransactionId());
   if (response.responseCode != ResponseCode::OK)
     throw PTPOperationException(response.responseCode);
 
@@ -32,9 +32,9 @@ OperationResponseData PTPExtension::mesg(uint16_t operationCode,
                                          std::array<uint32_t, 5> params) {
   std::lock_guard lock(transactionMutex);
 
-  OperationRequestData request(operationCode, params);
+  OperationRequestData request(operationCode, false, false, params);
   OperationResponseData response =
-      transport->mesg(request, getSessionId(), getTransactionId());
+      transport->transaction(request, getSessionId(), getTransactionId());
   if (response.responseCode != ResponseCode::OK)
     throw PTPOperationException(response.responseCode);
 
