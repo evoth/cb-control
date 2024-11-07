@@ -6,9 +6,9 @@ OperationResponseData PTPExtension::send(uint16_t operationCode,
                                          std::vector<unsigned char> data) {
   std::lock_guard lock(transactionMutex);
 
-  OperationRequestData request(operationCode, true, true, params, data);
-  OperationResponseData response =
-      transport->transaction(request, getSessionId(), getTransactionId());
+  OperationRequestData request(true, true, operationCode, getSessionId(),
+                               getTransactionId(), params, data);
+  OperationResponseData response = transport->transaction(request);
   if (response.responseCode != ResponseCode::OK)
     throw PTPOperationException(response.responseCode);
 
@@ -19,9 +19,9 @@ OperationResponseData PTPExtension::recv(uint16_t operationCode,
                                          std::array<uint32_t, 5> params) {
   std::lock_guard lock(transactionMutex);
 
-  OperationRequestData request(operationCode, true, false, params);
-  OperationResponseData response =
-      transport->transaction(request, getSessionId(), getTransactionId());
+  OperationRequestData request(true, false, operationCode, getSessionId(),
+                               getTransactionId(), params);
+  OperationResponseData response = transport->transaction(request);
   if (response.responseCode != ResponseCode::OK)
     throw PTPOperationException(response.responseCode);
 
@@ -32,9 +32,9 @@ OperationResponseData PTPExtension::mesg(uint16_t operationCode,
                                          std::array<uint32_t, 5> params) {
   std::lock_guard lock(transactionMutex);
 
-  OperationRequestData request(operationCode, false, false, params);
-  OperationResponseData response =
-      transport->transaction(request, getSessionId(), getTransactionId());
+  OperationRequestData request(false, false, operationCode, getSessionId(),
+                               getTransactionId(), params);
+  OperationResponseData response = transport->transaction(request);
   if (response.responseCode != ResponseCode::OK)
     throw PTPOperationException(response.responseCode);
 

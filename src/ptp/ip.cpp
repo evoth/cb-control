@@ -91,9 +91,7 @@ PTPIP::PTPIP(std::array<uint8_t, 16> clientGuid,
   }
 }
 
-OperationResponseData PTPIP::transaction(const OperationRequestData& request,
-                                         uint32_t sessionId,
-                                         uint32_t transactionId) {
+OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
   if (!isOpen())
     throw PTPTransportException("Transport is not open.");
 
@@ -101,15 +99,16 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request,
                                     ? DataPhaseInfo::DataOut
                                     : DataPhaseInfo::DataIn;
   OperationRequest opReq(static_cast<uint32_t>(dataPhaseInfo),
-                         request.operationCode, transactionId, request.params);
+                         request.operationCode, request.transactionId,
+                         request.params);
   commandSocket->sendPacket(opReq);
 
   if (dataPhaseInfo == DataPhaseInfo::DataOut) {
-    StartData startData(transactionId, request.data.size());
+    StartData startData(request.transactionId, request.data.size());
     commandSocket->sendPacket(startData);
 
     // TODO: Avoid copying request.data?
-    EndData endData(transactionId, request.data);
+    EndData endData(request.transactionId, request.data);
     commandSocket->sendPacket(endData);
   }
 

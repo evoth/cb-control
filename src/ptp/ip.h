@@ -47,9 +47,8 @@ class PTPIP : public PTPTransport {
     return commandSocket->isConnected() && eventSocket->isConnected();
   };
 
-  OperationResponseData transaction(const OperationRequestData& request,
-                                    uint32_t sessionId,
-                                    uint32_t transactionId) override;
+  OperationResponseData transaction(
+      const OperationRequestData& request) override;
 
  private:
   std::unique_ptr<Socket> commandSocket;
