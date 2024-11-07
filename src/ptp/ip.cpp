@@ -91,7 +91,7 @@ PTPIP::PTPIP(std::array<uint8_t, 16> clientGuid,
   }
 }
 
-OperationResponseData PTPIP::transaction(OperationRequestData& request,
+OperationResponseData PTPIP::transaction(const OperationRequestData& request,
                                          uint32_t sessionId,
                                          uint32_t transactionId,
                                          DataPhaseInfo dataPhaseInfo) {
@@ -142,19 +142,19 @@ OperationResponseData PTPIP::transaction(OperationRequestData& request,
   }
 }
 
-OperationResponseData PTPIP::send(OperationRequestData& request,
+OperationResponseData PTPIP::send(const OperationRequestData& request,
                                   uint32_t sessionId,
                                   uint32_t transactionId) {
   return transaction(request, sessionId, transactionId, DataPhaseInfo::DataOut);
 }
 
-OperationResponseData PTPIP::recv(OperationRequestData& request,
+OperationResponseData PTPIP::recv(const OperationRequestData& request,
                                   uint32_t sessionId,
                                   uint32_t transactionId) {
   return transaction(request, sessionId, transactionId, DataPhaseInfo::DataIn);
 }
 
-OperationResponseData PTPIP::mesg(OperationRequestData& request,
+OperationResponseData PTPIP::mesg(const OperationRequestData& request,
                                   uint32_t sessionId,
                                   uint32_t transactionId) {
   return transaction(request, sessionId, transactionId, DataPhaseInfo::DataIn);

@@ -1,15 +1,44 @@
 #include "ptp.h"
 
-OperationResponseData PTPExtension::send(OperationRequestData& request) {
-  transport->send(request, getSessionId(), getTransactionId());
+// TODO: Prevent `data` from being copied so many times throughout the process
+OperationResponseData PTPExtension::send(uint16_t operationCode,
+                                         std::array<uint32_t, 5> params,
+                                         std::vector<unsigned char> data) {
+  std::lock_guard lock(transactionMutex);
+
+  OperationRequestData request(operationCode, params, data);
+  OperationResponseData response =
+      transport->send(request, getSessionId(), getTransactionId());
+  if (response.responseCode != ResponseCode::OK)
+    throw PTPOperationException(response.responseCode);
+
+  return response;
 };
 
-OperationResponseData PTPExtension::recv(OperationRequestData& request) {
-  transport->recv(request, getSessionId(), getTransactionId());
+OperationResponseData PTPExtension::recv(uint16_t operationCode,
+                                         std::array<uint32_t, 5> params) {
+  std::lock_guard lock(transactionMutex);
+
+  OperationRequestData request(operationCode, params);
+  OperationResponseData response =
+      transport->recv(request, getSessionId(), getTransactionId());
+  if (response.responseCode != ResponseCode::OK)
+    throw PTPOperationException(response.responseCode);
+
+  return response;
 };
 
-OperationResponseData PTPExtension::mesg(OperationRequestData& request) {
-  transport->mesg(request, getSessionId(), getTransactionId());
+OperationResponseData PTPExtension::mesg(uint16_t operationCode,
+                                         std::array<uint32_t, 5> params) {
+  std::lock_guard lock(transactionMutex);
+
+  OperationRequestData request(operationCode, params);
+  OperationResponseData response =
+      transport->mesg(request, getSessionId(), getTransactionId());
+  if (response.responseCode != ResponseCode::OK)
+    throw PTPOperationException(response.responseCode);
+
+  return response;
 };
 
 void PTPExtension::openSession() {
@@ -17,19 +46,13 @@ void PTPExtension::openSession() {
     return;
   sessionId++;
   transactionId = 1;
-  OperationRequestData request(OperationCode::OpenSession, {sessionId});
-  OperationResponseData response = mesg(request);
-  if (response.responseCode != ResponseCode::OK)
-    throw PTPOperationException(response.responseCode);
+  mesg(OperationCode::OpenSession, {sessionId});
   isSessionOpen = true;
 }
 
 void PTPExtension::closeSession() {
   if (!isSessionOpen)
     return;
-  OperationRequestData request(OperationCode::CloseSession);
-  OperationResponseData response = mesg(request);
-  if (response.responseCode != ResponseCode::OK)
-    throw PTPOperationException(response.responseCode);
+  mesg(OperationCode::CloseSession);
   isSessionOpen = false;
 }

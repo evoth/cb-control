@@ -47,15 +47,15 @@ class PTPIP : public PTPTransport {
     return commandSocket->isConnected() && eventSocket->isConnected();
   };
 
-  OperationResponseData send(OperationRequestData& request,
+  OperationResponseData send(const OperationRequestData& request,
                              uint32_t sessionId,
                              uint32_t transactionId) override;
 
-  OperationResponseData recv(OperationRequestData& request,
+  OperationResponseData recv(const OperationRequestData& request,
                              uint32_t sessionId,
                              uint32_t transactionId) override;
 
-  OperationResponseData mesg(OperationRequestData& request,
+  OperationResponseData mesg(const OperationRequestData& request,
                              uint32_t sessionId,
                              uint32_t transactionId) override;
 
@@ -64,7 +64,7 @@ class PTPIP : public PTPTransport {
   std::unique_ptr<Socket> eventSocket;
   std::array<uint8_t, 16> guid;
   std::string name;
-  OperationResponseData transaction(OperationRequestData& request,
+  OperationResponseData transaction(const OperationRequestData& request,
                                     uint32_t sessionId,
                                     uint32_t transactionId,
                                     DataPhaseInfo dataPhaseInfo);

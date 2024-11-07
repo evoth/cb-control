@@ -6,6 +6,7 @@
 #include <exception>
 #include <format>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -72,20 +73,20 @@ struct OperationResponseData {
 
 class PTPTransport {
  public:
-  // Constructor should open transport?
-  // Destructor should close transport?
+  // Constructor should open transport
+  // Destructor should close transport
   // TODO: What to do if transport closes early?
   // TODO: Deal with events (event queue, pollEvents(), etc.)
 
   virtual bool isOpen() = 0;
 
-  virtual OperationResponseData send(OperationRequestData& request,
+  virtual OperationResponseData send(const OperationRequestData& request,
                                      uint32_t sessionId,
                                      uint32_t transactionId) = 0;
-  virtual OperationResponseData recv(OperationRequestData& request,
+  virtual OperationResponseData recv(const OperationRequestData& request,
                                      uint32_t sessionId,
                                      uint32_t transactionId) = 0;
-  virtual OperationResponseData mesg(OperationRequestData& request,
+  virtual OperationResponseData mesg(const OperationRequestData& request,
                                      uint32_t sessionId,
                                      uint32_t transactionId) = 0;
 };
@@ -98,20 +99,33 @@ class PTPExtension {
       throw PTPTransportException("No transport provided.");
   }
 
+  ~PTPExtension() {
+    try {
+      closeSession();
+    } catch (const std::exception& e) {
+      // TODO: Handle exception
+    }
+  }
+
   virtual void openSession();
   virtual void closeSession();
 
  protected:
   std::unique_ptr<PTPTransport> transport;
 
-  OperationResponseData send(OperationRequestData& request);
-  OperationResponseData recv(OperationRequestData& request);
-  OperationResponseData mesg(OperationRequestData& request);
+  OperationResponseData send(uint16_t operationCode,
+                             std::array<uint32_t, 5> params = {},
+                             std::vector<unsigned char> data = {});
+  OperationResponseData recv(uint16_t operationCode,
+                             std::array<uint32_t, 5> params = {});
+  OperationResponseData mesg(uint16_t operationCode,
+                             std::array<uint32_t, 5> params = {});
 
  private:
   uint32_t sessionId = 0;
   uint32_t transactionId = 0;
   bool isSessionOpen = false;
+  std::mutex transactionMutex;
 
   uint32_t getSessionId() { return isSessionOpen ? sessionId : 0; }
   uint32_t getTransactionId() { return isSessionOpen ? transactionId++ : 0; }

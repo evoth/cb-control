@@ -80,7 +80,9 @@
       "thread": "cpp",
       "xlocbuf": "cpp",
       "xlocmes": "cpp",
-      "queue": "cpp"
+      "queue": "cpp",
+      "chrono": "cpp",
+      "forward_list": "cpp"
     },
     "[cpp]": {
       "editor.defaultFormatter": "ms-vscode.cpptools",
