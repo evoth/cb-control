@@ -18,6 +18,7 @@ class WindowsSocket : public Socket {
   }
 
   virtual ~WindowsSocket() {
+    std::cout << "Socket destructed" << std::endl;
     closesocket(clientSocket);
     WSACleanup();
   }
@@ -28,6 +29,21 @@ class WindowsSocket : public Socket {
     clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (clientSocket == INVALID_SOCKET)
       return false;
+
+    BOOL bOptVal = TRUE;
+    int bOptLen = sizeof(BOOL);
+
+    if (setsockopt(clientSocket, SOL_SOCKET, SO_KEEPALIVE,
+                   (const char*)&bOptVal, sizeof(bOptLen)) == SOCKET_ERROR) {
+      close();
+      return false;
+    }
+
+    if (setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY,
+                   (const char*)&bOptVal, sizeof(bOptLen)) == SOCKET_ERROR) {
+      close();
+      return false;
+    }
 
     SOCKADDR_IN serverAddress;
     serverAddress.sin_family = AF_INET;
@@ -44,6 +60,7 @@ class WindowsSocket : public Socket {
   }
 
   bool close() override {
+    std::cout << "Socket closed" << std::endl;
     int result = closesocket(clientSocket);
     clientSocket = INVALID_SOCKET;
     return result == 0;
@@ -82,7 +99,7 @@ class WindowsSocket : public Socket {
     return totalSent;
   }
 
-  int recv(Buffer& buffer, int length, unsigned int timeoutMs = 1000) override {
+  int recv(Buffer& buffer, int length, unsigned int timeoutMs) override {
     auto now = std::chrono::steady_clock::now();
     auto endTime = now + std::chrono::milliseconds(timeoutMs);
 
@@ -120,8 +137,10 @@ class WindowsSocket : public Socket {
       int result = ::recv(clientSocket, buff, buffBytes, 0);
 
       // TODO: Close socket (or mark as closed) if appropriate
-      if (result == SOCKET_ERROR)
+      if (result == SOCKET_ERROR) {
+        std::cout << "OOPS: " << WSAGetLastError() << std::endl;
         return totalReceived;
+      }
 
       for (int i = 0; i < result; i++) {
         buffer.push_back(buff[i]);
@@ -157,12 +176,20 @@ int main() {
   canon.openSession();
   std::cout << "PTP session successfully opened!" << std::endl;
 
-  std::cout << "Waiting for 10 seconds..." << std::endl;
-  std::this_thread::sleep_for(std::chrono::seconds(10));
+  std::cout << "Waiting for 5 seconds..." << std::endl;
+  std::this_thread::sleep_for(std::chrono::seconds(5));
 
-  std::cout << "Closing PTP session..." << std::endl;
-  canon.closeSession();
-  std::cout << "PTP session successfully closed! (gg?)" << std::endl;
+  std::cout << "Releasing shutter..." << std::endl;
+  canon.releaseShutter();
+
+  std::cout << "Waiting for 1 second..." << std::endl;
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  std::cout << "Releasing shutter..." << std::endl;
+  canon.releaseShutter();
+
+  std::cout << "Waiting for 5 seconds..." << std::endl;
+  std::this_thread::sleep_for(std::chrono::seconds(5));
 
   return 0;
 }

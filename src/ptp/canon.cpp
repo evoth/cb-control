@@ -26,3 +26,7 @@ void CanonPTP::closeSession() {
 
   PTPExtension::closeSession();
 }
+
+void CanonPTP::releaseShutter() {
+  mesg(CanonOperationCode::EOSRemoteRelease);
+}

@@ -13,6 +13,8 @@ class CanonPTP : public PTPExtension {
   void openSession() override;
   void closeSession() override;
 
+  void releaseShutter();
+
  private:
   std::jthread eosEventThread;
 };

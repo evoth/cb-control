@@ -10,6 +10,9 @@
 #include <string>
 #include <vector>
 
+// TODO: Formal logging
+#include <iostream>
+
 // TODO: Figure out where to catch and deal with exceptions (probably within
 // PTPExtension class)
 
@@ -106,6 +109,7 @@ class PTPExtension {
   }
 
   virtual ~PTPExtension() {
+    std::cout << "PTPExtension destructed" << std::endl;
     try {
       closeSession();
     } catch (const std::exception& e) {

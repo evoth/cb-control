@@ -14,12 +14,13 @@ void Socket::sendPacket(Packet& packet) {
                     actualBytes, targetBytes));
 }
 
-void Socket::recvPacket(Buffer& buffer) {
+// TODO: Better timeout handling
+void Socket::recvPacket(Buffer& buffer, unsigned int timeoutMs) {
   Packet packet;
   buffer.clear();
 
   int targetBytes = sizeof(packet.length);
-  int actualBytes = recv(buffer, targetBytes);
+  int actualBytes = recv(buffer, targetBytes, timeoutMs);
   if (actualBytes < targetBytes)
     throw PTPTransportException(
         std::format("Socket timed out while receiving packet length ({}/{} "
@@ -28,7 +29,7 @@ void Socket::recvPacket(Buffer& buffer) {
 
   packet.unpack(buffer);
   targetBytes = packet.length - sizeof(packet.length);
-  actualBytes = recv(buffer, targetBytes);
+  actualBytes = recv(buffer, targetBytes, timeoutMs);
   if (actualBytes < targetBytes)
     throw PTPTransportException(
         std::format("Socket timed out while receiving packet body ({}/{} "
@@ -56,7 +57,7 @@ PTPIP::PTPIP(std::array<uint8_t, 16> clientGuid,
 
   InitCommandRequest initCmdReq(clientGuid, clientName);
   this->commandSocket->sendPacket(initCmdReq);
-  this->commandSocket->recvPacket(response);
+  this->commandSocket->recvPacket(response, 60000);
   auto initCmdAck = Packet::unpackAs<InitCommandAck>(response);
 
   if (!initCmdAck) {

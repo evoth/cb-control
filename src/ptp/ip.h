@@ -15,15 +15,13 @@ class Socket {
   virtual bool isConnected() = 0;
 
   void sendPacket(Packet& packet);
-  void recvPacket(Buffer& buffer);
+  void recvPacket(Buffer& buffer, unsigned int timeoutMs = 10000);
 
  protected:
   virtual int send(Buffer& buffer) = 0;
   // Should attempt to append `length` bytes to the buffer, waiting until enough
   // bytes have accumulated or `timeoutMs` milliseconds have passed
-  virtual int recv(Buffer& buffer,
-                   int length,
-                   unsigned int timeoutMs = 1000) = 0;
+  virtual int recv(Buffer& buffer, int length, unsigned int timeoutMs) = 0;
 };
 
 namespace DataPhaseInfo {
@@ -45,6 +43,7 @@ class PTPIP : public PTPTransport {
         int port = 15740);
 
   virtual ~PTPIP() {
+    std::cout << "PTPIP destructed" << std::endl;
     commandSocket->close();
     eventSocket->close();
   }
