@@ -19,25 +19,23 @@ class PTPOperationException : public std::exception {
 
   PTPOperationException(uint32_t responseCode)
       : errorCode(responseCode),
-        message(
-            std::format("PTP Operation Error: {:#04x}", responseCode).c_str()) {
-  }
+        message(std::format("PTP Operation Error: {:#04x}", responseCode)) {}
 
-  const char* what() const noexcept override { return message; }
+  const char* what() const noexcept override { return message.c_str(); }
 
  private:
-  const char* message;
+  const std::string message;
 };
 
 class PTPTransportException : public std::exception {
  public:
-  PTPTransportException(const char* message)
-      : message(std::format("PTP Transport Error: {}", message).c_str()) {}
+  PTPTransportException(const std::string& message)
+      : message(std::format("PTP Transport Error: {}", message)) {}
 
-  const char* what() const noexcept override { return message; }
+  const char* what() const noexcept override { return message.c_str(); }
 
  private:
-  const char* message;
+  const std::string message;
 };
 
 struct EventData {
@@ -89,6 +87,7 @@ class PTPTransport {
  public:
   // Constructor should open transport
   // Destructor should close transport
+  virtual ~PTPTransport() {};
   // TODO: What to do if transport closes early?
   // TODO: Deal with events (event queue, pollEvents(), etc.)
 
@@ -102,11 +101,11 @@ class PTPExtension {
  public:
   PTPExtension(std::unique_ptr<PTPTransport> transport)
       : transport(std::move(transport)) {
-    if (!transport)
+    if (!this->transport)
       throw PTPTransportException("No transport provided.");
   }
 
-  ~PTPExtension() {
+  virtual ~PTPExtension() {
     try {
       closeSession();
     } catch (const std::exception& e) {

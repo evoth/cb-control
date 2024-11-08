@@ -1,13 +1,10 @@
+#include "ptp/canon.h"
 #include "ptp/ip.h"
 
-#include <stdio.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <chrono>
-#include <iomanip>
 #include <iostream>
-
-#pragma comment(lib, "Ws2_32.lib")
 
 #define SOCKET_BUFF_SIZE 512
 
@@ -20,12 +17,12 @@ class WindowsSocket : public Socket {
       throw PTPTransportException("WSAStartup failed in socket constructor.");
   }
 
-  ~WindowsSocket() {
+  virtual ~WindowsSocket() {
     closesocket(clientSocket);
     WSACleanup();
   }
 
-  bool connect(std::string ip, int port) override {
+  bool connect(const std::string& ip, int port) override {
     close();
 
     clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -42,6 +39,8 @@ class WindowsSocket : public Socket {
       close();
       return false;
     }
+
+    return true;
   }
 
   bool close() override {
@@ -141,5 +140,29 @@ class WindowsSocket : public Socket {
 };
 
 int main() {
+  const std::array<uint8_t, 16> guid(
+      {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7});
+
+  std::cout << "Opening PTPIP transport..." << std::endl;
+  std::unique_ptr<PTPIP> ptpip =
+      std::make_unique<PTPIP>(guid, "Tim", std::make_unique<WindowsSocket>(),
+                              std::make_unique<WindowsSocket>(), "192.168.4.7");
+  std::cout << "PTPIP transport successfully opened!" << std::endl;
+
+  std::cout << "Creating CanonPTP instance..." << std::endl;
+  CanonPTP canon(std::move(ptpip));
+  std::cout << "CanonPTP instance successfully created!" << std::endl;
+
+  std::cout << "Opening PTP session..." << std::endl;
+  canon.openSession();
+  std::cout << "PTP session successfully opened!" << std::endl;
+
+  std::cout << "Waiting for 10 seconds..." << std::endl;
+  std::this_thread::sleep_for(std::chrono::seconds(10));
+
+  std::cout << "Closing PTP session..." << std::endl;
+  canon.closeSession();
+  std::cout << "PTP session successfully closed! (gg?)" << std::endl;
+
   return 0;
 }

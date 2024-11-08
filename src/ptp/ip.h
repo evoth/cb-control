@@ -8,7 +8,9 @@
 // If send/recv are called when not connected, they should return 0
 class Socket {
  public:
-  virtual bool connect(std::string ip, int port) = 0;
+  virtual ~Socket() {};
+
+  virtual bool connect(const std::string& ip, int port) = 0;
   virtual bool close() = 0;
   virtual bool isConnected() = 0;
 
@@ -24,23 +26,25 @@ class Socket {
                    unsigned int timeoutMs = 1000) = 0;
 };
 
+namespace DataPhaseInfo {
 enum DataPhaseInfo : uint32_t {
   Unknown = 0x00,
   DataIn = 0x01,
   DataOut = 0x02,
 };
+}
 
 // TODO: Figure out where to catch and deal with exceptions
 class PTPIP : public PTPTransport {
  public:
   PTPIP(std::array<uint8_t, 16> clientGuid,
-        std::string clientName,
+        const std::string& clientName,
         std::unique_ptr<Socket> commandSocket,
         std::unique_ptr<Socket> eventSocket,
-        std::string ip,
+        const std::string& ip,
         int port = 15740);
 
-  ~PTPIP() {
+  virtual ~PTPIP() {
     commandSocket->close();
     eventSocket->close();
   }
