@@ -2,8 +2,8 @@
 
 #include <chrono>
 
-void CanonPTP::openSession() {
-  PTPExtension::openSession();
+void CanonPTPCamera::openSession() {
+  PTP::openSession();
 
   mesg(CanonOperationCode::EOSSetRemoteMode, {0x01});
   mesg(CanonOperationCode::EOSSetEventMode, {0x01});
@@ -18,15 +18,15 @@ void CanonPTP::openSession() {
   });
 }
 
-void CanonPTP::closeSession() {
+void CanonPTPCamera::closeSession() {
   if (eosEventThread.joinable()) {
     eosEventThread.request_stop();
     eosEventThread.join();
   }
 
-  PTPExtension::closeSession();
+  PTP::closeSession();
 }
 
-void CanonPTP::releaseShutter() {
+void CanonPTPCamera::releaseShutter() {
   mesg(CanonOperationCode::EOSRemoteRelease);
 }

@@ -1,10 +1,13 @@
 #include "ptp.h"
 
 // TODO: Avoid copying `data`?
-OperationResponseData PTPExtension::send(uint16_t operationCode,
-                                         std::array<uint32_t, 5> params,
-                                         std::vector<unsigned char> data) {
+OperationResponseData PTP::send(uint16_t operationCode,
+                                std::array<uint32_t, 5> params,
+                                std::vector<unsigned char> data) {
   std::lock_guard lock(transactionMutex);
+
+  if (!transport)
+    throw PTPTransportException("Transport is null.");
 
   OperationRequestData request(true, true, operationCode, getSessionId(),
                                getTransactionId(), params, data);
@@ -15,9 +18,12 @@ OperationResponseData PTPExtension::send(uint16_t operationCode,
   return response;
 };
 
-OperationResponseData PTPExtension::recv(uint16_t operationCode,
-                                         std::array<uint32_t, 5> params) {
+OperationResponseData PTP::recv(uint16_t operationCode,
+                                std::array<uint32_t, 5> params) {
   std::lock_guard lock(transactionMutex);
+
+  if (!transport)
+    throw PTPTransportException("Transport is null.");
 
   OperationRequestData request(true, false, operationCode, getSessionId(),
                                getTransactionId(), params);
@@ -28,9 +34,12 @@ OperationResponseData PTPExtension::recv(uint16_t operationCode,
   return response;
 };
 
-OperationResponseData PTPExtension::mesg(uint16_t operationCode,
-                                         std::array<uint32_t, 5> params) {
+OperationResponseData PTP::mesg(uint16_t operationCode,
+                                std::array<uint32_t, 5> params) {
   std::lock_guard lock(transactionMutex);
+
+  if (!transport)
+    throw PTPTransportException("Transport is null.");
 
   OperationRequestData request(false, false, operationCode, getSessionId(),
                                getTransactionId(), params);
@@ -41,16 +50,18 @@ OperationResponseData PTPExtension::mesg(uint16_t operationCode,
   return response;
 };
 
-void PTPExtension::openSession() {
+void PTP::openSession() {
   if (isSessionOpen)
     return;
+  if (!isTransportOpen())
+    openTransport();
   sessionId++;
   transactionId = 1;
   mesg(OperationCode::OpenSession, {sessionId});
   isSessionOpen = true;
 }
 
-void PTPExtension::closeSession() {
+void PTP::closeSession() {
   if (!isSessionOpen)
     return;
   mesg(OperationCode::CloseSession);

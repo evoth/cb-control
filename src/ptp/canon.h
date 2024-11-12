@@ -5,15 +5,16 @@
 
 #include <thread>
 
-class CanonPTP : public PTPExtension {
+class CanonPTPCamera : public PTPCamera {
  public:
-  CanonPTP(std::unique_ptr<PTPTransport> transport)
-      : PTPExtension(std::move(transport)) {}
+  CanonPTPCamera(std::unique_ptr<PTPTransport> transport)
+      : PTPCamera(std::move(transport)) {}
 
+  void releaseShutter() override;
+
+ protected:
   void openSession() override;
   void closeSession() override;
-
-  void releaseShutter();
 
  private:
   std::jthread eosEventThread;

@@ -24,29 +24,44 @@ class Socket {
   virtual int recv(Buffer& buffer, int length, unsigned int timeoutMs) = 0;
 };
 
-namespace DataPhaseInfo {
-enum DataPhaseInfo : uint32_t {
+enum class DataPhaseInfo : uint32_t {
   Unknown = 0x00,
   DataIn = 0x01,
   DataOut = 0x02,
 };
-}
 
 // TODO: Figure out where to catch and deal with exceptions
 class PTPIP : public PTPTransport {
  public:
-  PTPIP(std::array<uint8_t, 16> clientGuid,
-        const std::string& clientName,
-        std::unique_ptr<Socket> commandSocket,
+  PTPIP(std::unique_ptr<Socket> commandSocket,
         std::unique_ptr<Socket> eventSocket,
-        const std::string& ip,
-        int port = 15740);
+        std::array<uint8_t, 16> clientGuid,
+        std::string clientName,
+        std::string ip,
+        int port = 15740)
+      : commandSocket(std::move(commandSocket)),
+        eventSocket(std::move(eventSocket)),
+        clientGuid(clientGuid),
+        clientName(clientName),
+        ip(ip),
+        port(port) {
+    if (!this->commandSocket)
+      throw PTPTransportException("No command socket provided.");
+    if (!this->eventSocket)
+      throw PTPTransportException("No event socket provided.");
+  }
 
   virtual ~PTPIP() {
     std::cout << "PTPIP destructed" << std::endl;
+    close();
+  }
+
+  void open() override;
+
+  void close() override {
     commandSocket->close();
     eventSocket->close();
-  }
+  };
 
   bool isOpen() override {
     return commandSocket->isConnected() && eventSocket->isConnected();
@@ -58,6 +73,11 @@ class PTPIP : public PTPTransport {
  private:
   std::unique_ptr<Socket> commandSocket;
   std::unique_ptr<Socket> eventSocket;
+  const std::array<uint8_t, 16> clientGuid;
+  const std::string clientName;
+  const std::string ip;
+  const int port;
+
   std::array<uint8_t, 16> guid;
   std::string name;
 };

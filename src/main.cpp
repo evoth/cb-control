@@ -154,7 +154,7 @@ class WindowsSocket : public Socket {
   }
 
  private:
-  SOCKET clientSocket;
+  SOCKET clientSocket = INVALID_SOCKET;
   char buff[SOCKET_BUFF_SIZE];
 };
 
@@ -162,34 +162,24 @@ int main() {
   const std::array<uint8_t, 16> guid(
       {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7});
 
-  std::cout << "Opening PTPIP transport..." << std::endl;
-  std::unique_ptr<PTPIP> ptpip =
-      std::make_unique<PTPIP>(guid, "Tim", std::make_unique<WindowsSocket>(),
-                              std::make_unique<WindowsSocket>(), "192.168.4.7");
-  std::cout << "PTPIP transport successfully opened!" << std::endl;
+  std::unique_ptr<PTPIP> ptpip = std::make_unique<PTPIP>(
+      std::make_unique<WindowsSocket>(), std::make_unique<WindowsSocket>(),
+      guid, "Tim", "192.168.4.7");
+  CanonPTPCamera canon(std::move(ptpip));
 
-  std::cout << "Creating CanonPTP instance..." << std::endl;
-  CanonPTP canon(std::move(ptpip));
-  std::cout << "CanonPTP instance successfully created!" << std::endl;
+  for (int i = 0; i < 3; i++) {
+    canon.connect();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 
-  std::cout << "Opening PTP session..." << std::endl;
-  canon.openSession();
-  std::cout << "PTP session successfully opened!" << std::endl;
+    canon.releaseShutter();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  std::cout << "Waiting for 5 seconds..." << std::endl;
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+    canon.releaseShutter();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 
-  std::cout << "Releasing shutter..." << std::endl;
-  canon.releaseShutter();
-
-  std::cout << "Waiting for 1 second..." << std::endl;
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-
-  std::cout << "Releasing shutter..." << std::endl;
-  canon.releaseShutter();
-
-  std::cout << "Waiting for 5 seconds..." << std::endl;
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+    canon.disconnect();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+  }
 
   return 0;
 }

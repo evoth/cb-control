@@ -1,6 +1,8 @@
 #ifndef CB_CONTROL_PTP_PTP_H
 #define CB_CONTROL_PTP_PTP_H
 
+#include "../camera.h"
+
 #include <array>
 #include <cstdint>
 #include <exception>
@@ -14,7 +16,7 @@
 #include <iostream>
 
 // TODO: Figure out where to catch and deal with exceptions (probably within
-// PTPExtension class)
+// PTP class)
 
 class PTPOperationException : public std::exception {
  public:
@@ -88,28 +90,25 @@ struct OperationResponseData {
 
 class PTPTransport {
  public:
-  // Constructor should open transport
-  // Destructor should close transport
+  // Destructor should close
   virtual ~PTPTransport() {};
-  // TODO: What to do if transport closes early?
   // TODO: Deal with events (event queue, pollEvents(), etc.)
 
+  virtual void open() = 0;
+  virtual void close() = 0;
   virtual bool isOpen() = 0;
 
   virtual OperationResponseData transaction(
       const OperationRequestData& request) = 0;
 };
 
-class PTPExtension {
+class PTP {
  public:
-  PTPExtension(std::unique_ptr<PTPTransport> transport)
-      : transport(std::move(transport)) {
-    if (!this->transport)
-      throw PTPTransportException("No transport provided.");
-  }
+  PTP(std::unique_ptr<PTPTransport> transport)
+      : transport(std::move(transport)) {}
 
-  virtual ~PTPExtension() {
-    std::cout << "PTPExtension destructed" << std::endl;
+  virtual ~PTP() {
+    std::cout << "PTP destructed" << std::endl;
     try {
       closeSession();
     } catch (const std::exception& e) {
@@ -119,6 +118,25 @@ class PTPExtension {
 
   virtual void openSession();
   virtual void closeSession();
+
+  void openTransport() {
+    std::cout << "Opening transport" << std::endl;
+    if (!transport)
+      throw PTPTransportException("Transport is null.");
+    transport->open();
+  }
+
+  void closeTransport() {
+    if (!transport)
+      throw PTPTransportException("Transport is null.");
+    transport->close();
+  }
+
+  bool isTransportOpen() {
+    if (!transport)
+      throw PTPTransportException("Transport is null.");
+    return transport->isOpen();
+  }
 
  protected:
   std::unique_ptr<PTPTransport> transport;
@@ -141,10 +159,26 @@ class PTPExtension {
   uint32_t getTransactionId() { return isSessionOpen ? transactionId++ : 0; }
 };
 
+class PTPCamera : protected PTP, public Camera {
+ public:
+  PTPCamera(std::unique_ptr<PTPTransport> transport)
+      : PTP(std::move(transport)) {}
+
+  void connect() override {
+    openTransport();
+    openSession();
+  }
+
+  void disconnect() override {
+    closeSession();
+    closeTransport();
+  }
+};
+
 /* PTP Enums */
 // TODO: Figure out a cleaner way to do this? An OperationCode should be easily
 // comparable against uint16_t and passed as uint16_t to functions because
-// different PTPExtensions will have vendor-specific operation codes
+// different PTPs will have vendor-specific operation codes
 
 namespace OperationCode {
 enum OperationCode : uint16_t {

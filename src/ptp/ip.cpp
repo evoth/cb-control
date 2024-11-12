@@ -37,18 +37,9 @@ void Socket::recvPacket(Buffer& buffer, unsigned int timeoutMs) {
                     actualBytes, targetBytes));
 }
 
-PTPIP::PTPIP(std::array<uint8_t, 16> clientGuid,
-             const std::string& clientName,
-             std::unique_ptr<Socket> commandSocket,
-             std::unique_ptr<Socket> eventSocket,
-             const std::string& ip,
-             int port)
-    : commandSocket(std::move(commandSocket)),
-      eventSocket(std::move(eventSocket)) {
-  if (!this->commandSocket)
-    throw PTPTransportException("No command socket provided.");
-  if (!this->eventSocket)
-    throw PTPTransportException("No event socket provided.");
+void PTPIP::open() {
+  if (isOpen())
+    return;
 
   if (!this->commandSocket->connect(ip, port))
     throw PTPTransportException("Unable to connect command socket.");
@@ -102,9 +93,9 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
   if (!isOpen())
     throw PTPTransportException("Transport is not open.");
 
-  uint32_t dataPhaseInfo = (request.dataPhase && request.sending)
-                               ? DataPhaseInfo::DataOut
-                               : DataPhaseInfo::DataIn;
+  DataPhaseInfo dataPhaseInfo = (request.dataPhase && request.sending)
+                                    ? DataPhaseInfo::DataOut
+                                    : DataPhaseInfo::DataIn;
   OperationRequest opReq(static_cast<uint32_t>(dataPhaseInfo),
                          request.operationCode, request.transactionId,
                          request.params);
