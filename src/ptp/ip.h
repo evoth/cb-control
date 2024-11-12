@@ -8,7 +8,7 @@
 // If send/recv are called when not connected, they should return 0
 class Socket {
  public:
-  virtual ~Socket() {};
+  virtual ~Socket() = default;
 
   virtual bool connect(const std::string& ip, int port) = 0;
   virtual bool close() = 0;

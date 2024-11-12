@@ -1,5 +1,42 @@
 #include "ptp.h"
 
+void PTP::openTransport() {
+  std::cout << "Opening transport" << std::endl;
+  if (!transport)
+    throw PTPTransportException("Transport is null.");
+  transport->open();
+}
+
+void PTP::closeTransport() {
+  if (!transport)
+    throw PTPTransportException("Transport is null.");
+  transport->close();
+}
+
+bool PTP::isTransportOpen() {
+  if (!transport)
+    throw PTPTransportException("Transport is null.");
+  return transport->isOpen();
+}
+
+void PTP::openSession() {
+  if (isSessionOpen)
+    return;
+  if (!isTransportOpen())
+    openTransport();
+  sessionId++;
+  transactionId = 1;
+  mesg(OperationCode::OpenSession, {sessionId});
+  isSessionOpen = true;
+}
+
+void PTP::closeSession() {
+  if (!isSessionOpen)
+    return;
+  mesg(OperationCode::CloseSession);
+  isSessionOpen = false;
+}
+
 // TODO: Avoid copying `data`?
 OperationResponseData PTP::send(uint16_t operationCode,
                                 std::array<uint32_t, 5> params,
@@ -49,21 +86,3 @@ OperationResponseData PTP::mesg(uint16_t operationCode,
 
   return response;
 };
-
-void PTP::openSession() {
-  if (isSessionOpen)
-    return;
-  if (!isTransportOpen())
-    openTransport();
-  sessionId++;
-  transactionId = 1;
-  mesg(OperationCode::OpenSession, {sessionId});
-  isSessionOpen = true;
-}
-
-void PTP::closeSession() {
-  if (!isSessionOpen)
-    return;
-  mesg(OperationCode::CloseSession);
-  isSessionOpen = false;
-}

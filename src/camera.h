@@ -14,7 +14,7 @@
 // TODO: Return types? Exception handling?
 class Camera {
  public:
-  virtual ~Camera() {}
+  virtual ~Camera() = default;
 
   virtual void connect() = 0;
   virtual void disconnect() = 0;

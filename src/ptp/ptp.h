@@ -91,7 +91,7 @@ struct OperationResponseData {
 class PTPTransport {
  public:
   // Destructor should close
-  virtual ~PTPTransport() {};
+  virtual ~PTPTransport() = default;
   // TODO: Deal with events (event queue, pollEvents(), etc.)
 
   virtual void open() = 0;
@@ -116,27 +116,12 @@ class PTP {
     }
   }
 
+  void openTransport();
+  void closeTransport();
+  bool isTransportOpen();
+
   virtual void openSession();
   virtual void closeSession();
-
-  void openTransport() {
-    std::cout << "Opening transport" << std::endl;
-    if (!transport)
-      throw PTPTransportException("Transport is null.");
-    transport->open();
-  }
-
-  void closeTransport() {
-    if (!transport)
-      throw PTPTransportException("Transport is null.");
-    transport->close();
-  }
-
-  bool isTransportOpen() {
-    if (!transport)
-      throw PTPTransportException("Transport is null.");
-    return transport->isOpen();
-  }
 
  protected:
   std::unique_ptr<PTPTransport> transport;
