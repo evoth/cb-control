@@ -1,17 +1,11 @@
 #include "ip.h"
 
 // TODO: Formal logging
-#include <iostream>
 
 void Socket::sendPacket(Packet& packet) {
   Buffer buffer = packet.pack();
-
-  int targetBytes = buffer.size();
-  int actualBytes = send(buffer);
-  if (actualBytes < targetBytes)
-    throw PTPTransportException(
-        std::format("Socket unable to send packet ({}/{} bytes sent).",
-                    actualBytes, targetBytes));
+  if (send(buffer) < buffer.size())
+    throw PTPTransportException("Socket unable to send packet.");
 }
 
 // TODO: Better timeout handling
@@ -20,21 +14,15 @@ void Socket::recvPacket(Buffer& buffer, unsigned int timeoutMs) {
   buffer.clear();
 
   int targetBytes = sizeof(packet.length);
-  int actualBytes = recv(buffer, targetBytes, timeoutMs);
-  if (actualBytes < targetBytes)
+  if (recv(buffer, targetBytes, timeoutMs) < targetBytes)
     throw PTPTransportException(
-        std::format("Socket timed out while receiving packet length ({}/{} "
-                    "bytes received).",
-                    actualBytes, targetBytes));
+        "Socket timed out while receiving length of next packet.");
 
   packet.unpack(buffer);
   targetBytes = packet.length - sizeof(packet.length);
-  actualBytes = recv(buffer, targetBytes, timeoutMs);
-  if (actualBytes < targetBytes)
+  if (recv(buffer, targetBytes, timeoutMs) < targetBytes)
     throw PTPTransportException(
-        std::format("Socket timed out while receiving packet body ({}/{} "
-                    "bytes received).",
-                    actualBytes, targetBytes));
+        "Socket timed out while receiving packet body.");
 }
 
 void PTPIP::open() {
@@ -54,8 +42,9 @@ void PTPIP::open() {
   if (!initCmdAck) {
     // TODO: Move to helper function to avoid duplication?
     if (auto initFail = Packet::unpackAs<InitFail>(response))
-      throw PTPTransportException(
-          std::format("Init Fail (reason code {:#04x})", initFail->reason));
+      throw PTPTransportException("Init Fail");
+    // throw PTPTransportException(
+    //     std::format("Init Fail (reason code {:#04x})", initFail->reason));
     throw PTPTransportException(
         "Unexpected packet type while initializing connection.");
   }
@@ -74,21 +63,21 @@ void PTPIP::open() {
   if (!initEvtAck) {
     // TODO: Move to helper function to avoid duplication?
     if (auto initFail = Packet::unpackAs<InitFail>(response))
-      throw PTPTransportException(
-          std::format("Init Fail (reason code {:#04x})", initFail->reason));
+      throw PTPTransportException("Init Fail");
+    // throw PTPTransportException(
+    //     std::format("Init Fail (reason code {:#04x})", initFail->reason));
     throw PTPTransportException(
         "Unexpected packet type while initializing connection.");
   }
 }
 
 OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
-  std::cout << "PTPIP Operation Request "
-            << std::format(
-                   "(operationCode={:#04x}, transactionId={}, param1={:#04x}, "
-                   "dataPhase={}, sending={})",
-                   request.operationCode, request.transactionId,
-                   request.params[0], request.dataPhase, request.sending)
-            << std::endl;
+  // Logger::log(
+  //     std::format("PTPIP Operation Request (operationCode={:#04x}, "
+  //                 "transactionId={}, param1={:#04x}, dataPhase={},
+  //                 sending={})", request.operationCode, request.transactionId,
+  //                 request.params[0], request.dataPhase, request.sending)
+  //         .c_str());
 
   if (!isOpen())
     throw PTPTransportException("Transport is not open.");
@@ -118,34 +107,32 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
 
     // TODO: Validate transactionId?
     if (auto opRes = Packet::unpackAs<OperationResponse>(response)) {
-      std::cout << "> Operation Response "
-                << std::format("(responseCode={:#04x})", opRes->responseCode)
-                << std::endl;
+      // Logger::log(std::format("> Operation Response (responseCode={:#04x})",
+      //                         opRes->responseCode)
+      //                 .c_str());
       // TODO: Replace with warnings?
       if (dataPhaseInfo == DataPhaseInfo::DataOut && payload.size() > 0)
         throw PTPTransportException(
             "Unexpected Data-In phase during Data-Out transaction.");
       if (payload.size() != totalDataLength)
         throw PTPTransportException(
-            std::format("Wrong amount of data in transaction data phase ({}/{} "
-                        "bytes received).",
-                        payload.size(), totalDataLength));
+            "Wrong amount of data in transaction data phase.");
       return OperationResponseData(opRes->responseCode, opRes->params, payload);
     } else if (auto startData = Packet::unpackAs<StartData>(response)) {
-      std::cout << "> Start Data "
-                << std::format("(totalDataLength={})",
-                               startData->totalDataLength)
-                << std::endl;
+      // Logger::log(std::format("> Start Data (totalDataLength={})",
+      //                         startData->totalDataLength)
+      //                 .c_str());
       totalDataLength = startData->totalDataLength;
     } else if (auto data = Packet::unpackAs<Data>(response)) {
-      std::cout << "> Data "
-                << std::format("(payload.size()={})", data->payload.size())
-                << std::endl;
+      // Logger::log(
+      //     std::format("> Data (payload.size()={})", data->payload.size())
+      //         .c_str());
       payload.insert(payload.end(), data->payload.begin(), data->payload.end());
     } else if (auto endData = Packet::unpackAs<EndData>(response)) {
-      std::cout << "> End Data "
-                << std::format("(payload.size()={})", endData->payload.size())
-                << std::endl;
+      // Logger::log(
+      //     std::format("> End Data (payload.size()={})",
+      //     endData->payload.size())
+      //         .c_str());
       payload.insert(payload.end(), endData->payload.begin(),
                      endData->payload.end());
     } else {

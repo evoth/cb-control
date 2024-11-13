@@ -1,7 +1,7 @@
 #include "ptp.h"
 
 void PTP::openTransport() {
-  std::cout << "Opening transport" << std::endl;
+  Logger::log("Opening transport");
   if (!transport)
     throw PTPTransportException("Transport is null.");
   transport->open();

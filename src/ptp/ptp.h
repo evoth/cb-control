@@ -2,18 +2,18 @@
 #define CB_CONTROL_PTP_PTP_H
 
 #include "../camera.h"
+#include "../logger.h"
 
 #include <array>
 #include <cstdint>
 #include <exception>
-#include <format>
+// #include <format>
+#include <iomanip>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <vector>
-
-// TODO: Formal logging
-#include <iostream>
 
 // TODO: Figure out where to catch and deal with exceptions (probably within
 // PTP class)
@@ -22,20 +22,23 @@ class PTPOperationException : public std::exception {
  public:
   const int errorCode;
 
-  PTPOperationException(uint32_t responseCode)
-      : errorCode(responseCode),
-        message(std::format("PTP Operation Error: {:#04x}", responseCode)) {}
+  PTPOperationException(uint32_t responseCode) : errorCode(responseCode) {
+    std::stringstream msg;
+    msg << "PTP Operation Error: 0x" << std::setfill('0') << std::setw(4)
+        << std::hex << responseCode;
+    message = msg.str();
+  }
 
   const char* what() const noexcept override { return message.c_str(); }
 
  private:
-  const std::string message;
+  std::string message;
 };
 
 class PTPTransportException : public std::exception {
  public:
   PTPTransportException(const std::string& message)
-      : message(std::format("PTP Transport Error: {}", message)) {}
+      : message("PTP Transport Error: " + message) {}
 
   const char* what() const noexcept override { return message.c_str(); }
 
@@ -108,7 +111,7 @@ class PTP {
       : transport(std::move(transport)) {}
 
   virtual ~PTP() {
-    std::cout << "PTP destructed" << std::endl;
+    Logger::log("PTP destructed");
     try {
       closeSession();
     } catch (const std::exception& e) {

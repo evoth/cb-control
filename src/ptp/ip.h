@@ -1,6 +1,7 @@
 #ifndef CB_CONTROL_PTP_IP_H
 #define CB_CONTROL_PTP_IP_H
 
+#include "../logger.h"
 #include "../packet.h"
 #include "ptp.h"
 
@@ -52,7 +53,7 @@ class PTPIP : public PTPTransport {
   }
 
   virtual ~PTPIP() {
-    std::cout << "PTPIP destructed" << std::endl;
+    Logger::log("PTPIP destructed");
     close();
   }
 

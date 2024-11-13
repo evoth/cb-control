@@ -1,9 +1,12 @@
+#ifndef CB_CONTROL_WINDOWS_SOCKET_H
+#define CB_CONTROL_WINDOWS_SOCKET_H
+
 #include "../ptp/ip.h"
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <chrono>
-#include <iostream>
+#include "../logger.h"
 
 #define SOCKET_BUFF_SIZE 512
 
@@ -17,7 +20,7 @@ class WindowsSocket : public Socket {
   }
 
   virtual ~WindowsSocket() {
-    std::cout << "Socket destructed" << std::endl;
+    Logger::log("Socket destructed");
     closesocket(clientSocket);
     WSACleanup();
   }
@@ -59,7 +62,7 @@ class WindowsSocket : public Socket {
   }
 
   bool close() override {
-    std::cout << "Socket closed" << std::endl;
+    Logger::log("Socket closed");
     int result = closesocket(clientSocket);
     clientSocket = INVALID_SOCKET;
     return result == 0;
@@ -136,10 +139,8 @@ class WindowsSocket : public Socket {
       int result = ::recv(clientSocket, buff, buffBytes, 0);
 
       // TODO: Close socket (or mark as closed) if appropriate
-      if (result == SOCKET_ERROR) {
-        std::cout << "OOPS: " << WSAGetLastError() << std::endl;
+      if (result == SOCKET_ERROR)
         return totalReceived;
-      }
 
       for (int i = 0; i < result; i++) {
         buffer.push_back(buff[i]);
@@ -156,3 +157,5 @@ class WindowsSocket : public Socket {
   SOCKET clientSocket = INVALID_SOCKET;
   char buff[SOCKET_BUFF_SIZE];
 };
+
+#endif

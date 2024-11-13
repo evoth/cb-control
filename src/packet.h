@@ -128,14 +128,14 @@ class Array : public Field {
   std::array<T, N>& values;
 };
 
-class String : public Field {
+class WideString : public Field {
  public:
-  String(std::string& value) : value(value) {}
+  WideString(std::string& value) : value(value) {}
 
  protected:
   void pack(Buffer& buffer, int& offset) override {
     uint16_t wideChar;
-    Primitive packer = Primitive(wideChar);
+    Primitive packer(wideChar);
     for (char& c : value) {
       wideChar = c;
       packer.pack(buffer, offset);
@@ -146,7 +146,7 @@ class String : public Field {
 
   void unpack(Buffer& buffer, int& offset) override {
     uint16_t wideChar;
-    Primitive unpacker = Primitive(wideChar);
+    Primitive unpacker(wideChar);
     value.clear();
     while (offset < buffer.size()) {
       unpacker.unpack(buffer, offset);
@@ -305,7 +305,7 @@ class Packet : public Field {
 
   // String (encoded as 16 bits/char to emulate Unicode as in PTP/IP)
   void field(std::string& value) {
-    fields.push_back(std::make_unique<String>(value));
+    fields.push_back(std::make_unique<WideString>(value));
   }
 
   // Vector of packets which share a base type, which are dynamically unpacked

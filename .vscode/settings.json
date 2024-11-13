@@ -82,7 +82,12 @@
       "xlocmes": "cpp",
       "queue": "cpp",
       "chrono": "cpp",
-      "forward_list": "cpp"
+      "forward_list": "cpp",
+      "condition_variable": "cpp",
+      "set": "cpp",
+      "numbers": "cpp",
+      "semaphore": "cpp",
+      "span": "cpp"
     },
     "[cpp]": {
       "editor.defaultFormatter": "ms-vscode.cpptools",
