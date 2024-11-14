@@ -71,7 +71,7 @@ class PTPString : public Packet {
 
   void unpack(Buffer& buffer, int& offset) override {
     // Deal with "empty" string, which consists of a single 0x00 byte
-    if (buffer[offset] == 0x00) {
+    if (offset >= buffer.size() || buffer[offset] == 0x00) {
       numChars = 0;
       string.clear();
       offset++;

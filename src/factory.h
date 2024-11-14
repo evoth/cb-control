@@ -4,12 +4,29 @@
 #include "camera.h"
 #include "ptp/ip.h"
 
+// TODO: Change architecture so that camera only represents data needed to
+// connect (without first connecting) and vendor detection only happens later
+
 class CameraFactory {
  public:
   virtual ~CameraFactory() = default;
 
   virtual bool isSupported() = 0;
   virtual std::unique_ptr<Camera> create() = 0;
+};
+
+// Create can only be called once on this factory because the transport is
+// passed off to the camera
+class PTPFactory : public CameraFactory {
+ public:
+  PTPFactory(std::unique_ptr<PTPTransport> transport)
+      : transport(std::move(transport)) {}
+
+  bool isSupported() override { return true; }
+  std::unique_ptr<Camera> create() override;
+
+ private:
+  std::unique_ptr<PTPTransport> transport;
 };
 
 class PTPIPFactory : public CameraFactory {

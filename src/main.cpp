@@ -14,9 +14,6 @@ int main() {
   }
 
   camera->connect();
-  std::this_thread::sleep_for(std::chrono::seconds(2));
-
-  camera->getDeviceInfo();
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
   camera->releaseShutter();

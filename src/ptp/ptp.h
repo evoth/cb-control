@@ -5,21 +5,12 @@
 #include "../logger.h"
 #include "ptpData.h"
 
-#include <array>
-#include <cstdint>
 #include <exception>
-// #include <format>
-#include <iomanip>
-#include <memory>
 #include <mutex>
-#include <sstream>
-#include <string>
-#include <vector>
+#include <utility>
 
 // TODO: Figure out where to catch and deal with exceptions (probably within
 // PTP class)
-
-// TODO: Split into multiple headers
 
 class PTPOperationException : public std::exception {
  public:
@@ -74,6 +65,11 @@ class PTP {
  public:
   PTP(std::unique_ptr<PTPTransport> transport)
       : transport(std::move(transport)) {}
+  PTP(PTP&& o) noexcept
+      : transport(std::move(o.transport)),
+        sessionId(std::exchange(o.sessionId, 0)),
+        transactionId(std::exchange(o.transactionId, 0)),
+        isSessionOpen(std::exchange(o.isSessionOpen, false)) {};
 
   virtual ~PTP() {
     Logger::log("PTP destructed");
@@ -117,6 +113,7 @@ class PTPCamera : protected PTP, public Camera {
  public:
   PTPCamera(std::unique_ptr<PTPTransport> transport)
       : PTP(std::move(transport)) {}
+  PTPCamera(PTP&& ptp) : PTP(std::move(ptp)) {}
 
   void connect() override {
     openTransport();
@@ -126,19 +123,6 @@ class PTPCamera : protected PTP, public Camera {
   void disconnect() override {
     closeSession();
     closeTransport();
-  }
-
-  void getDeviceInfo() override {
-    DeviceInfo deviceInfo = PTP::getDeviceInfo();
-    Logger::log("VendorExtensionID: 0x%04x", deviceInfo.vendorExtensionId);
-    Logger::log("VendorExtensionVersion: 0x%02x",
-                deviceInfo.vendorExtensionVersion);
-    Logger::log("VendorExtensionDesc: %s",
-                deviceInfo.vendorExtensionDesc.string.c_str());
-    Logger::log("Manufacturer: %s", deviceInfo.manufacturer.string.c_str());
-    Logger::log("Model: %s", deviceInfo.model.string.c_str());
-    Logger::log("DeviceVersion: %s", deviceInfo.deviceVersion.string.c_str());
-    Logger::log("SerialNumber: %s", deviceInfo.serialNumber.string.c_str());
   }
 };
 

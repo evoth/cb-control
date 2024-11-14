@@ -9,6 +9,7 @@ class CanonPTPCamera : public PTPCamera {
  public:
   CanonPTPCamera(std::unique_ptr<PTPTransport> transport)
       : PTPCamera(std::move(transport)) {}
+  CanonPTPCamera(PTP&& ptp) : PTPCamera(std::move(ptp)) {}
 
   void releaseShutter() override;
 
