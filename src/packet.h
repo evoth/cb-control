@@ -81,17 +81,16 @@ class Primitive : public Field {
 template <std::unsigned_integral T>
 class Vector : public Field {
  public:
+  Vector(std::vector<T>& values) : values(values), greedy(true) {}
   Vector(std::vector<T>& values, uint32_t& lengthRef)
       : Field(lengthRef), values(values), greedy(false) {}
-  Vector(std::vector<T>& values) : values(values), greedy(true) {}
 
  protected:
   void pack(Buffer& buffer, int& offset) override {
     for (T& value : values)
       Primitive<T>(value).pack(buffer, offset);
 
-    if (!greedy)
-      lengthRef = values.size();
+    lengthRef = values.size();
   }
 
   void unpack(Buffer& buffer, int& offset) override {
@@ -133,28 +132,8 @@ class WideString : public Field {
   WideString(std::string& value) : value(value) {}
 
  protected:
-  void pack(Buffer& buffer, int& offset) override {
-    uint16_t wideChar;
-    Primitive packer(wideChar);
-    for (char& c : value) {
-      wideChar = c;
-      packer.pack(buffer, offset);
-    }
-    wideChar = 0;
-    packer.pack(buffer, offset);
-  }
-
-  void unpack(Buffer& buffer, int& offset) override {
-    uint16_t wideChar;
-    Primitive unpacker(wideChar);
-    value.clear();
-    while (offset < buffer.size()) {
-      unpacker.unpack(buffer, offset);
-      if (!wideChar)
-        break;
-      value.push_back(wideChar);
-    }
-  }
+  void pack(Buffer& buffer, int& offset) override;
+  void unpack(Buffer& buffer, int& offset) override;
 
  private:
   std::string& value;
@@ -214,44 +193,36 @@ class ChoiceVector : public Field {
   }
 };
 
+class NestedPacket : public Field {
+ public:
+  NestedPacket(Packet& value) : value(value) {}
+
+ protected:
+  void pack(Buffer& buffer, int& offset) override;
+  void unpack(Buffer& buffer, int& offset) override;
+
+ private:
+  Packet& value;
+};
+
 // TODO: The overloading on field is kind of fun but hurts readability
 class Packet : public Field {
  public:
   using Field::length;
 
-  Packet(uint32_t defaultType = 0) : type(defaultType) {
+  // If type is specified, default length and type fields are added
+  Packet(uint32_t type) : type(type) {
     field();
-    field(type);
+    field(this->type);
   }
 
-  void pack(Buffer& buffer, int& offset) override {
-    int startOffset = offset;
-    for (std::unique_ptr<Field>& field : fields)
-      field->pack(buffer, offset);
+  Packet() : type(0) {}
 
-    lengthRef = offset - startOffset;
+  virtual void pack(Buffer& buffer, int& offset) override;
+  virtual void unpack(Buffer& buffer, int& offset) override;
 
-    offset = startOffset;
-    for (std::unique_ptr<Field>& field : fields)
-      field->pack(buffer, offset);
-  };
-
-  void unpack(Buffer& buffer, int& offset) override {
-    for (std::unique_ptr<Field>& field : fields)
-      field->unpack(buffer, offset);
-  };
-
-  Buffer pack() {
-    Buffer buffer;
-    int offset = 0;
-    pack(buffer, offset);
-    return buffer;
-  };
-
-  void unpack(Buffer& buffer) {
-    int offset = 0;
-    unpack(buffer, offset);
-  };
+  Buffer pack();
+  void unpack(Buffer& buffer);
 
   virtual bool isEnd() { return false; }
 
@@ -267,7 +238,7 @@ class Packet : public Field {
   template <typename T>
     requires(std::derived_from<T, Packet>)
   static std::unique_ptr<T> unpackAs(Buffer& buffer) {
-    Packet testPacket;
+    Packet testPacket(0);
     testPacket.unpack(buffer);
     if (std::unique_ptr<T> packet = testPacket.is<T>()) {
       packet->unpack(buffer);
@@ -303,9 +274,14 @@ class Packet : public Field {
     fields.push_back(std::make_unique<Array<T, N>>(values));
   }
 
-  // String (encoded as 16 bits/char to emulate Unicode as in PTP/IP)
+  // String (encoded as 16 bits/char as in PTP)
   void field(std::string& value) {
     fields.push_back(std::make_unique<WideString>(value));
+  }
+
+  // Nested packet (packed/unpacked in place)
+  void field(Packet& value) {
+    fields.push_back(std::make_unique<NestedPacket>(value));
   }
 
   // Vector of packets which share a base type, which are dynamically unpacked

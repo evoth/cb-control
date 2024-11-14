@@ -2,7 +2,6 @@
 #define CB_CONTROL_PTP_IP_H
 
 #include "../logger.h"
-#include "../packet.h"
 #include "ptp.h"
 
 // Ideally, these should not throw any exceptions

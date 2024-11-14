@@ -10,7 +10,7 @@ void Socket::sendPacket(Packet& packet) {
 
 // TODO: Better timeout handling
 void Socket::recvPacket(Buffer& buffer, unsigned int timeoutMs) {
-  Packet packet;
+  Packet packet(0);
   buffer.clear();
 
   int targetBytes = sizeof(packet.length);
@@ -42,9 +42,8 @@ void PTPIP::open() {
   if (!initCmdAck) {
     // TODO: Move to helper function to avoid duplication?
     if (auto initFail = Packet::unpackAs<InitFail>(response))
-      throw PTPTransportException("Init Fail");
-    // throw PTPTransportException(
-    //     std::format("Init Fail (reason code {:#04x})", initFail->reason));
+      throw PTPTransportException("Init Fail (reason code 0x%04x)",
+                                  initFail->reason);
     throw PTPTransportException(
         "Unexpected packet type while initializing connection.");
   }
@@ -63,21 +62,19 @@ void PTPIP::open() {
   if (!initEvtAck) {
     // TODO: Move to helper function to avoid duplication?
     if (auto initFail = Packet::unpackAs<InitFail>(response))
-      throw PTPTransportException("Init Fail");
-    // throw PTPTransportException(
-    //     std::format("Init Fail (reason code {:#04x})", initFail->reason));
+      throw PTPTransportException("Init Fail (reason code 0x%04x)",
+                                  initFail->reason);
     throw PTPTransportException(
         "Unexpected packet type while initializing connection.");
   }
 }
 
 OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
-  // Logger::log(
-  //     std::format("PTPIP Operation Request (operationCode={:#04x}, "
-  //                 "transactionId={}, param1={:#04x}, dataPhase={},
-  //                 sending={})", request.operationCode, request.transactionId,
-  //                 request.params[0], request.dataPhase, request.sending)
-  //         .c_str());
+  Logger::log(
+      "PTPIP Operation Request (operationCode=0x%04x, transactionId=%d, "
+      "param1=0x%04x, dataPhase=%d, sending=%d)",
+      request.operationCode, request.transactionId, request.params[0],
+      request.dataPhase, request.sending);
 
   if (!isOpen())
     throw PTPTransportException("Transport is not open.");
@@ -107,9 +104,8 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
 
     // TODO: Validate transactionId?
     if (auto opRes = Packet::unpackAs<OperationResponse>(response)) {
-      // Logger::log(std::format("> Operation Response (responseCode={:#04x})",
-      //                         opRes->responseCode)
-      //                 .c_str());
+      Logger::log("> Operation Response (responseCode=0x%04x)",
+                  opRes->responseCode);
       // TODO: Replace with warnings?
       if (dataPhaseInfo == DataPhaseInfo::DataOut && payload.size() > 0)
         throw PTPTransportException(
@@ -119,20 +115,14 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
             "Wrong amount of data in transaction data phase.");
       return OperationResponseData(opRes->responseCode, opRes->params, payload);
     } else if (auto startData = Packet::unpackAs<StartData>(response)) {
-      // Logger::log(std::format("> Start Data (totalDataLength={})",
-      //                         startData->totalDataLength)
-      //                 .c_str());
+      Logger::log("> Start Data (totalDataLength=%d)",
+                  startData->totalDataLength);
       totalDataLength = startData->totalDataLength;
     } else if (auto data = Packet::unpackAs<Data>(response)) {
-      // Logger::log(
-      //     std::format("> Data (payload.size()={})", data->payload.size())
-      //         .c_str());
+      Logger::log("> Data (payload.size()=%d)", data->payload.size());
       payload.insert(payload.end(), data->payload.begin(), data->payload.end());
     } else if (auto endData = Packet::unpackAs<EndData>(response)) {
-      // Logger::log(
-      //     std::format("> End Data (payload.size()={})",
-      //     endData->payload.size())
-      //         .c_str());
+      Logger::log("> End Data (payload.size()=%d)", endData->payload.size());
       payload.insert(payload.end(), endData->payload.begin(),
                      endData->payload.end());
     } else {

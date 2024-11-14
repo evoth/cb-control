@@ -19,7 +19,9 @@ class Camera {
   virtual void connect() = 0;
   virtual void disconnect() = 0;
 
+  // TODO: For testing only, refine interface later
   virtual void releaseShutter() = 0;
+  virtual void getDeviceInfo() = 0;
 };
 
 #endif

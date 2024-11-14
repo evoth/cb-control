@@ -37,6 +37,13 @@ void PTP::closeSession() {
   isSessionOpen = false;
 }
 
+DeviceInfo PTP::getDeviceInfo() {
+  Buffer data = recv(OperationCode::GetDeviceInfo).data;
+  DeviceInfo deviceInfo;
+  deviceInfo.unpack(data);
+  return deviceInfo;
+}
+
 // TODO: Avoid copying `data`?
 OperationResponseData PTP::send(uint16_t operationCode,
                                 std::array<uint32_t, 5> params,

@@ -9,7 +9,10 @@
 
 class Logger {
  public:
-  static void log(const char* msg) {
+  template <typename... Args>
+  static void log(const char* format, Args... args) {
+    char msg[256];
+    snprintf(msg, sizeof(msg), format, args...);
 #if defined(_WIN32)
     std::cout << msg << std::endl;
 #elif defined(ESP32)
