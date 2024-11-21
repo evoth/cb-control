@@ -39,6 +39,19 @@ class PTPTransportException : public std::exception {
   char msg[256];
 };
 
+class PTPCameraException : public std::exception {
+ public:
+  template <typename... Args>
+  PTPCameraException(const char* format, Args... args) {
+    snprintf(msg, sizeof(msg), format, args...);
+  }
+
+  const char* what() const noexcept override { return msg; }
+
+ private:
+  char msg[256];
+};
+
 struct EventData {
   const uint16_t eventCode;
   const std::array<uint32_t, 3> params;
@@ -86,7 +99,7 @@ class PTP {
 
   virtual void openSession();
   virtual void closeSession();
-  DeviceInfo getDeviceInfo();
+  virtual DeviceInfo getDeviceInfo();
 
  protected:
   std::unique_ptr<PTPTransport> transport;
@@ -111,9 +124,8 @@ class PTP {
 
 class PTPCamera : protected PTP, public Camera {
  public:
-  PTPCamera(std::unique_ptr<PTPTransport> transport)
-      : PTP(std::move(transport)) {}
-  PTPCamera(PTP&& ptp) : PTP(std::move(ptp)) {}
+  PTPCamera(PTP&& ptp, VendorExtensionId vendorExtensionId)
+      : PTP(std::move(ptp)), vendorExtensionId(vendorExtensionId) {}
 
   void connect() override {
     openTransport();
@@ -124,6 +136,25 @@ class PTPCamera : protected PTP, public Camera {
     closeSession();
     closeTransport();
   }
+
+ protected:
+  const VendorExtensionId vendorExtensionId;
+
+  std::shared_ptr<DeviceInfo> getCachedDI() {
+    if (!cachedDI)
+      cachedDI = std::make_shared<DeviceInfo>(getDeviceInfo());
+    return cachedDI;
+  }
+
+  void invalidateCachedDI() { cachedDI = nullptr; }
+
+  bool isOpSupported(uint16_t operationCode) {
+    return getCachedDI()->isOpSupported(
+        operationCode, static_cast<uint32_t>(vendorExtensionId));
+  }
+
+ private:
+  std::shared_ptr<DeviceInfo> cachedDI;
 };
 
 #endif

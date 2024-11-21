@@ -62,23 +62,8 @@ class PTPString : public Packet {
     field(this->string);
   }
 
-  void pack(Buffer& buffer, int& offset) override {
-    if (string.length() > PTPString::MAX_CHARS)
-      string = string.substr(0, PTPString::MAX_CHARS);
-    numChars = string.length() + 1;
-    Packet::pack(buffer, offset);
-  };
-
-  void unpack(Buffer& buffer, int& offset) override {
-    // Deal with "empty" string, which consists of a single 0x00 byte
-    if (offset >= buffer.size() || buffer[offset] == 0x00) {
-      numChars = 0;
-      string.clear();
-      offset++;
-      return;
-    }
-    Packet::unpack(buffer, offset);
-  };
+  void pack(Buffer& buffer, int& offset) override;
+  void unpack(Buffer& buffer, int& offset) override;
 
  private:
   // PTP strings are limited to 255 characters (including null terminator)
@@ -118,6 +103,8 @@ class DeviceInfo : public Packet {
     field(this->deviceVersion);
     field(this->serialNumber);
   }
+
+  bool isOpSupported(uint16_t operationCode, uint32_t vendorExtensionId = 0);
 };
 
 /* PTP Enums */
@@ -208,5 +195,27 @@ enum ResponseCode : uint16_t {
   InvalidDataset = 0x2023,
 };
 }
+
+enum class VendorExtensionId : uint32_t {
+  EastmanKodak = 0x00000001,
+  SeikoEpson = 0x00000002,
+  Agilent = 0x00000003,
+  Polaroid = 0x00000004,
+  AgfaGevaert = 0x00000005,
+  Microsoft = 0x00000006,
+  Equinox = 0x00000007,
+  Viewquest = 0x00000008,
+  STMicroelectronics = 0x00000009,
+  Nikon = 0x0000000A,
+  Canon = 0x0000000B,
+  FotoNation = 0x0000000C,
+  PENTAX = 0x0000000D,
+  Fuji = 0x0000000E,
+  Sony = 0x00000011,
+  NDD = 0x00000012,
+  Samsung = 0x0000001A,
+  Parrot = 0x0000001B,
+  Panasonic = 0x0000001C,
+};
 
 #endif

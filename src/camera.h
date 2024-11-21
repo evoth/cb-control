@@ -17,7 +17,7 @@ class Camera {
   virtual void connect() = 0;
   virtual void disconnect() = 0;
 
-  virtual void releaseShutter() = 0;
+  virtual void triggerCapture() = 0;
 };
 
 #endif

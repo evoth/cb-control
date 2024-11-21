@@ -104,7 +104,7 @@ class Vector : public Field {
 
  private:
   std::vector<T>& values;
-  bool greedy;
+  const bool greedy;
 };
 
 template <std::unsigned_integral T, size_t N>

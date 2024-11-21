@@ -4,30 +4,26 @@
 #include "../logger.h"
 #include "ptp.h"
 
-// Ideally, these should not throw any exceptions
-// If send/recv are called when not connected, they should return 0
+// TODO: Use noexcept?
 class Socket {
  public:
   virtual ~Socket() = default;
 
-  virtual bool connect(const std::string& ip, int port) = 0;
-  virtual bool close() = 0;
-  virtual bool isConnected() = 0;
+  virtual bool connect(const std::string& ip,
+                       int port) = 0;  // Should not throw exceptions
+  virtual bool close() = 0;            // Should not throw exceptions
+  virtual bool isConnected() = 0;      // Should not throw exceptions
 
   void sendPacket(Packet& packet);
   void recvPacket(Buffer& buffer, unsigned int timeoutMs = 10000);
 
  protected:
-  virtual int send(Buffer& buffer) = 0;
-  // Should attempt to append `length` bytes to the buffer, waiting until enough
-  // bytes have accumulated or `timeoutMs` milliseconds have passed
-  virtual int recv(Buffer& buffer, int length, unsigned int timeoutMs) = 0;
-};
-
-enum class DataPhaseInfo : uint32_t {
-  Unknown = 0x00,
-  DataIn = 0x01,
-  DataOut = 0x02,
+  virtual int send(Buffer& buffer) = 0;  // Should not throw exceptions
+  // Attempts to append `length` bytes to the buffer, waiting until enough bytes
+  // have accumulated or until `timeoutMs` milliseconds have passed
+  virtual int recv(Buffer& buffer,
+                   int length,
+                   unsigned int timeoutMs) = 0;  // Should not throw exceptions
 };
 
 // TODO: Figure out where to catch and deal with exceptions

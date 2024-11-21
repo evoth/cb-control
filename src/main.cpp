@@ -16,10 +16,10 @@ int main() {
   camera->connect();
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
-  camera->releaseShutter();
+  camera->triggerCapture();
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  camera->releaseShutter();
+  camera->triggerCapture();
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
   camera->disconnect();

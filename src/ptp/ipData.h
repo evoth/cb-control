@@ -3,6 +3,12 @@
 
 #include "../packet.h"
 
+enum class DataPhaseInfo : uint32_t {
+  Unknown = 0x00,
+  DataIn = 0x01,
+  DataOut = 0x02,
+};
+
 /* PTP/IP Packets */
 
 class InitCommandRequest : public Packet {
@@ -75,7 +81,7 @@ class OperationRequest : public Packet {
     field(this->dataPhase);
     field(this->operationCode);
     field(this->transactionId);
-    field(this->params);
+    field(this->params);  // Greedy; consumes to end of buffer when unpacking
   }
 };
 
@@ -88,7 +94,7 @@ class OperationResponse : public Packet {
   OperationResponse() : Packet(0x07) {
     field(this->responseCode);
     field(this->transactionId);
-    field(this->params);
+    field(this->params);  // Greedy; consumes to end of buffer when unpacking
   }
 };
 

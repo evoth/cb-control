@@ -30,14 +30,14 @@ void PTPIP::open() {
   if (isOpen())
     return;
 
-  if (!this->commandSocket->connect(ip, port))
+  if (!commandSocket->connect(ip, port))
     throw PTPTransportException("Unable to connect command socket.");
 
   Buffer response;
 
   InitCommandRequest initCmdReq(clientGuid, clientName);
-  this->commandSocket->sendPacket(initCmdReq);
-  this->commandSocket->recvPacket(response, 60000);
+  commandSocket->sendPacket(initCmdReq);
+  commandSocket->recvPacket(response, 60000);
   auto initCmdAck = Packet::unpackAs<InitCommandAck>(response);
 
   if (!initCmdAck) {
@@ -49,15 +49,15 @@ void PTPIP::open() {
         "Unexpected packet type while initializing connection.");
   }
 
-  this->guid = initCmdAck->guid;
-  this->name = initCmdAck->name;
+  guid = initCmdAck->guid;
+  name = initCmdAck->name;
 
-  if (!this->eventSocket->connect(ip, port))
+  if (!eventSocket->connect(ip, port))
     throw PTPTransportException("Unable to connect event socket.");
 
   InitEventRequest initEvtReq(initCmdAck->connectionNum);
-  this->eventSocket->sendPacket(initEvtReq);
-  this->eventSocket->recvPacket(response);
+  eventSocket->sendPacket(initEvtReq);
+  eventSocket->recvPacket(response);
   auto initEvtAck = Packet::unpackAs<InitEventAck>(response);
 
   if (!initEvtAck) {

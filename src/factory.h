@@ -4,9 +4,6 @@
 #include "camera.h"
 #include "ptp/ip.h"
 
-// TODO: Change architecture so that camera only represents data needed to
-// connect (without first connecting) and vendor detection only happens later
-
 class CameraFactory {
  public:
   virtual ~CameraFactory() = default;

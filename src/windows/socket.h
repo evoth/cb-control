@@ -158,4 +158,6 @@ class WindowsSocket : public Socket {
   char buff[SOCKET_BUFF_SIZE];
 };
 
+#undef SOCKET_BUFF_SIZE
+
 #endif
