@@ -4,19 +4,6 @@
 #include "../packet.h"
 #include "ptp.h"
 
-class CanonEOSDeviceInfo : public Packet {
- public:
-  PTPArray<uint32_t> eventsSupported;
-  PTPArray<uint32_t> devicePropertiesSupported;
-  PTPArray<uint32_t> unknown;
-
-  CanonEOSDeviceInfo() {
-    field(this->eventsSupported);
-    field(this->devicePropertiesSupported);
-    field(this->unknown);
-  }
-};
-
 // TODO: Support other datatypes using template?
 class CanonDeviceProp : public Packet {
  public:

@@ -63,7 +63,9 @@ class PTPString : public Packet {
   }
 
   void pack(Buffer& buffer, int& offset) override;
-  void unpack(Buffer& buffer, int& offset) override;
+  void unpack(Buffer& buffer,
+              int& offset,
+              std::optional<int> limitOffset) override;
 
  private:
   // PTP strings are limited to 255 characters (including null terminator)

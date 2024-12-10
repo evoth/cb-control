@@ -5,11 +5,14 @@
 #include <concepts>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
-// TODO: Replace templates with Concept auto where possible?
-// TODO: Use requires clauses in more concise way
+// TODO: Implement switches + vectors to support choice packet vectors
+// TODO: Implement typeRef system similar to lengthRef? How to support other
+//       data types for lengthRef/typeRef without over-templating everything?
+//       (std::variant?)
 
 typedef std::vector<unsigned char> Buffer;
 class Packet;
@@ -21,22 +24,28 @@ concept ChoiceType =
 // template <typename T>
 // concept PrimitiveType = std::unsigned_integral<T>;
 
-// TODO: Static method to return value while unpacking without needing
-// instance
 class Field {
  public:
   Field() : lengthRef(length) {}
   Field(uint32_t& lengthRef) : lengthRef(lengthRef) {}
 
   virtual void pack(Buffer& buffer, int& offset) = 0;
-  virtual void unpack(Buffer& buffer, int& offset) = 0;
+  virtual void unpack(Buffer& buffer,
+                      int& offset,
+                      std::optional<int> limitOffset) = 0;
 
  protected:
   uint32_t length = 0;
   uint32_t& lengthRef;
+
+  static int getUnpackLimit(Buffer& buffer, std::optional<int> limitOffset) {
+    int limit = buffer.size();
+    if (limitOffset.has_value() && limitOffset.value() < limit)
+      limit = limitOffset.value();
+    return limit;
+  }
 };
 
-// TODO: Restrict template
 template <std::unsigned_integral T>
 class Primitive : public Field {
  public:
@@ -46,8 +55,10 @@ class Primitive : public Field {
     packFieldHelper(value, buffer, offset);
   }
 
-  void unpack(Buffer& buffer, int& offset) override {
-    unpackFieldHelper(value, buffer, offset);
+  void unpack(Buffer& buffer,
+              int& offset,
+              std::optional<int> limitOffset) override {
+    unpackFieldHelper(value, buffer, offset, limitOffset);
   }
 
  protected:
@@ -55,29 +66,35 @@ class Primitive : public Field {
   void packFieldHelper(U& value, Buffer& buffer, int& offset) {
     for (int i = 0; i < sizeof(U); i++) {
       unsigned char byte = (value >> i * 8) & 0xFF;
-      if (offset + i < buffer.size())
-        buffer[offset + i] = byte;
+      if (offset < buffer.size())
+        buffer[offset] = byte;
       else
         buffer.push_back(byte);
+      offset++;
     }
-    offset += sizeof(U);
   }
 
   template <std::unsigned_integral U>
-  void unpackFieldHelper(U& value, Buffer& buffer, int& offset) {
+  void unpackFieldHelper(U& value,
+                         Buffer& buffer,
+                         int& offset,
+                         std::optional<int> limitOffset) {
+    int limit = Field::getUnpackLimit(buffer, limitOffset);
     value = 0;
     for (int i = 0; i < sizeof(U); i++) {
       // Current behavior will assume byte=0x00 if out of range
-      if (offset + i < buffer.size())
-        value |= (buffer[offset + i]) << i * 8;
+      if (offset >= limit)
+        break;
+      value |= buffer[offset] << i * 8;
+      offset++;
     }
-    offset += sizeof(U);
   }
 
  private:
   T& value;
 };
 
+// TODO: Somehow limit greedy vector based on packet size?
 template <std::unsigned_integral T>
 class Vector : public Field {
  public:
@@ -93,11 +110,14 @@ class Vector : public Field {
     lengthRef = values.size();
   }
 
-  void unpack(Buffer& buffer, int& offset) override {
+  void unpack(Buffer& buffer,
+              int& offset,
+              std::optional<int> limitOffset) override {
+    int limit = Field::getUnpackLimit(buffer, limitOffset);
     values.clear();
-    for (int i = 0; greedy ? (offset < buffer.size()) : (i < lengthRef); i++) {
+    for (int i = 0; greedy ? (offset < limit) : (i < lengthRef); i++) {
       T value;
-      Primitive<T>(value).unpack(buffer, offset);
+      Primitive<T>(value).unpack(buffer, offset, limitOffset);
       values.push_back(value);
     }
   }
@@ -118,9 +138,11 @@ class Array : public Field {
       Primitive<T>(value).pack(buffer, offset);
   }
 
-  void unpack(Buffer& buffer, int& offset) override {
+  void unpack(Buffer& buffer,
+              int& offset,
+              std::optional<int> limitOffset) override {
     for (int i = 0; i < N; i++)
-      Primitive<T>(values[i]).unpack(buffer, offset);
+      Primitive<T>(values[i]).unpack(buffer, offset, limitOffset);
   }
 
  private:
@@ -133,7 +155,9 @@ class WideString : public Field {
 
  protected:
   void pack(Buffer& buffer, int& offset) override;
-  void unpack(Buffer& buffer, int& offset) override;
+  void unpack(Buffer& buffer,
+              int& offset,
+              std::optional<int> limitOffset) override;
 
  private:
   std::string& value;
@@ -141,57 +165,59 @@ class WideString : public Field {
 
 // TODO: Will have problems if respective packet doesn't have default
 // constructor
-// TODo: Figure out better way or simplify
-template <typename T, typename... Args>
-  requires ChoiceType<T, Args...>
-class ChoiceVector : public Field {
- public:
-  ChoiceVector(std::vector<std::unique_ptr<T>>& values) : values(values) {}
+// TODO: Will have problems if packet is greedy (reads until end of buffer)
+// TODO: Has to allocate packet of every possible type to unpack...
+// TODO: Figure out better way or simplify
+// template <typename T, typename... Args>
+//   requires ChoiceType<T, Args...>
+// class ChoiceVector : public Field {
+//  public:
+//   ChoiceVector(std::vector<std::unique_ptr<T>>& values) : values(values) {}
 
- protected:
-  void pack(Buffer& buffer, int& offset) override {
-    for (std::unique_ptr<T>& value : values)
-      value->pack(buffer, offset);
-  }
+//  protected:
+//   void pack(Buffer& buffer, int& offset) override {
+//     for (std::unique_ptr<T>& value : values)
+//       value->pack(buffer, offset);
+//   }
 
-  void unpack(Buffer& buffer, int& offset) override {
-    int startOffset = offset;
-    values.clear();
-    while (offset < buffer.size()) {
-      startOffset = offset;
-      values.push_back(choose(buffer, offset));
-      offset = startOffset + values.back()->length;
-      if (values.back()->isEnd())
-        break;
-    }
-  }
+//   void unpack(Buffer& buffer, int& offset) override {
+//     int startOffset = offset;
+//     values.clear();
+//     while (offset < buffer.size()) {
+//       startOffset = offset;
+//       values.push_back(choose(buffer, offset));
+//       offset = startOffset + values.back()->length;
+//       if (values.back()->isEnd())
+//         break;
+//     }
+//   }
 
- private:
-  std::vector<std::unique_ptr<T>>& values;
+//  private:
+//   std::vector<std::unique_ptr<T>>& values;
 
-  std::unique_ptr<T> choose(Buffer& buffer, int& offset) {
-    int startOffset = offset;
-    std::unique_ptr<T> testPacket = std::make_unique<T>();
-    testPacket->unpack(buffer, offset);
+//   std::unique_ptr<T> choose(Buffer& buffer, int& offset) {
+//     int startOffset = offset;
+//     std::unique_ptr<T> testPacket = std::make_unique<T>();
+//     testPacket->unpack(buffer, offset);
 
-    std::vector<std::unique_ptr<T>> choicesList;
-    (choice<Args>(choicesList), ...);
-    for (std::unique_ptr<T>& choicePacket : choicesList) {
-      if (testPacket->type == choicePacket->type) {
-        offset = startOffset;
-        choicePacket->unpack(buffer, offset);
-        return std::move(choicePacket);
-      }
-    }
-    return testPacket;
-  }
+//     std::vector<std::unique_ptr<T>> choicesList;
+//     (choice<Args>(choicesList), ...);
+//     for (std::unique_ptr<T>& choicePacket : choicesList) {
+//       if (testPacket->type == choicePacket->type) {
+//         offset = startOffset;
+//         choicePacket->unpack(buffer, offset);
+//         return std::move(choicePacket);
+//       }
+//     }
+//     return testPacket;
+//   }
 
-  template <typename U>
-    requires(std::derived_from<U, T>)
-  void choice(std::vector<std::unique_ptr<T>>& choicesList) {
-    choicesList.push_back(std::make_unique<U>());
-  }
-};
+//   template <typename U>
+//     requires(std::derived_from<U, T>)
+//   void choice(std::vector<std::unique_ptr<T>>& choicesList) {
+//     choicesList.push_back(std::make_unique<U>());
+//   }
+// };
 
 class NestedPacket : public Field {
  public:
@@ -199,7 +225,9 @@ class NestedPacket : public Field {
 
  protected:
   void pack(Buffer& buffer, int& offset) override;
-  void unpack(Buffer& buffer, int& offset) override;
+  void unpack(Buffer& buffer,
+              int& offset,
+              std::optional<int> limitOffset) override;
 
  private:
   Packet& value;
@@ -219,7 +247,9 @@ class Packet : public Field {
   Packet() : type(0) {}
 
   virtual void pack(Buffer& buffer, int& offset) override;
-  virtual void unpack(Buffer& buffer, int& offset) override;
+  virtual void unpack(Buffer& buffer,
+                      int& offset,
+                      std::optional<int> limitOffset = std::nullopt) override;
 
   Buffer pack();
   void unpack(Buffer& buffer);
@@ -286,11 +316,11 @@ class Packet : public Field {
 
   // Vector of packets which share a base type, which are dynamically unpacked
   // into respective object instances based on default value of the type field
-  template <typename T, typename... Args>
-    requires ChoiceType<T, Args...>
-  void field(std::vector<std::unique_ptr<T>>& values) {
-    fields.push_back(std::make_unique<ChoiceVector<T, Args...>>(values));
-  }
+  // template <typename T, typename... Args>
+  //   requires ChoiceType<T, Args...>
+  // void field(std::vector<std::unique_ptr<T>>& values) {
+  //   fields.push_back(std::make_unique<ChoiceVector<T, Args...>>(values));
+  // }
 
   // Special length field which is automatically populated with the packet
   // length when unpacking

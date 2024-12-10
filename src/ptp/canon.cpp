@@ -13,6 +13,7 @@ void CanonPTPCamera::openSession() {
   mesg(CanonOperationCode::EOSSetRemoteMode, {remoteMode});
   mesg(CanonOperationCode::EOSSetEventMode, {0x01});
 
+  // TODO: Proper event queue
   eosEventThread = std::jthread([this](std::stop_token stoken) {
     while (true) {
       if (stoken.stop_requested())
@@ -26,7 +27,7 @@ void CanonPTPCamera::openSession() {
   // TODO: Include specific exceptions?
   if (isEosM()) {
     mesg(CanonOperationCode::EOSSetEventMode, {0x02});
-    setEosDeviceProp(CanonEOSPropertyCode::EVFOutputDevice, 0x08);
+    // setEosDeviceProp(CanonEOSPropertyCode::EVFOutputDevice, 0x08);
   }
 
   invalidateCachedDI();
@@ -38,12 +39,11 @@ void CanonPTPCamera::closeSession() {
     eosEventThread.join();
   }
 
-  if (isEosM())
-    setEosDeviceProp(CanonEOSPropertyCode::EVFOutputDevice, 0x00);
+  // if (isEosM())
+  //   setEosDeviceProp(CanonEOSPropertyCode::EVFOutputDevice, 0x00);
 
   // Get events?
 
-  mesg(CanonOperationCode::EOSSetRemoteMode, {0x00});
   mesg(CanonOperationCode::EOSSetRemoteMode, {0x01});
   mesg(CanonOperationCode::EOSSetEventMode, {0x00});
 
@@ -56,19 +56,6 @@ DeviceInfo CanonPTPCamera::getDeviceInfo() {
   deviceInfo.vendorExtensionId =
       static_cast<uint32_t>(VendorExtensionId::Canon);
 
-  if (deviceInfo.isOpSupported(CanonOperationCode::EOSGetDeviceInfoEx)) {
-    Buffer data = recv(CanonOperationCode::EOSGetDeviceInfoEx).data;
-    CanonEOSDeviceInfo eosDeviceInfo;
-    eosDeviceInfo.unpack(data);
-
-    deviceInfo.devicePropertiesSupported.numElements +=
-        eosDeviceInfo.devicePropertiesSupported.numElements;
-    deviceInfo.devicePropertiesSupported.array.insert(
-        deviceInfo.devicePropertiesSupported.array.end(),
-        eosDeviceInfo.devicePropertiesSupported.array.begin(),
-        eosDeviceInfo.devicePropertiesSupported.array.end());
-  }
-
   return deviceInfo;
 }
 
@@ -76,6 +63,7 @@ DeviceInfo CanonPTPCamera::getDeviceInfo() {
 void CanonPTPCamera::triggerCapture() {
   if (isOpSupported(CanonOperationCode::EOSRemoteReleaseOn)) {
     mesg(CanonOperationCode::EOSRemoteReleaseOn, {0x03, 0x00});
+    // Get events?
     mesg(CanonOperationCode::EOSRemoteReleaseOff, {0x03});
   } else {
     mesg(CanonOperationCode::EOSRemoteRelease);
