@@ -1,36 +1,43 @@
 #include "packet.h"
 
-void WideString::pack(Buffer& buffer, int& offset) {
-  uint16_t wideChar;
-  Primitive packer(wideChar);
-  for (char& c : value) {
-    wideChar = c;
-    packer.pack(buffer, offset);
-  }
-  wideChar = 0;
-  packer.pack(buffer, offset);
+int getUnpackLimit(Buffer& buffer, std::optional<int> limitOffset) {
+  int limit = buffer.size();
+  if (limitOffset.has_value() && limitOffset.value() < limit)
+    limit = limitOffset.value();
+  return limit;
 }
 
-void WideString::unpack(Buffer& buffer,
+void WideString::pack(std::string& value, Buffer& buffer, int& offset) {
+  uint16_t wideChar;
+  for (char& c : value) {
+    wideChar = c;
+    packer.pack(wideChar, buffer, offset);
+  }
+  wideChar = 0;
+  packer.pack(wideChar, buffer, offset);
+}
+
+void WideString::unpack(std::string& value,
+                        Buffer& buffer,
                         int& offset,
                         std::optional<int> limitOffset) {
-  int limit = Field::getUnpackLimit(buffer, limitOffset);
+  int limit = getUnpackLimit(buffer, limitOffset);
   uint16_t wideChar;
-  Primitive unpacker(wideChar);
   value.clear();
   while (offset < limit) {
-    unpacker.unpack(buffer, offset, limitOffset);
+    packer.unpack(wideChar, buffer, offset, limitOffset);
     if (!wideChar)
       break;
     value.push_back(wideChar);
   }
 }
 
-void NestedPacket::pack(Buffer& buffer, int& offset) {
+void NestedPacket::pack(Packet& value, Buffer& buffer, int& offset) {
   value.pack(buffer, offset);
 }
 
-void NestedPacket::unpack(Buffer& buffer,
+void NestedPacket::unpack(Packet& value,
+                          Buffer& buffer,
                           int& offset,
                           std::optional<int> limitOffset) {
   value.unpack(buffer, offset, limitOffset);
@@ -38,13 +45,13 @@ void NestedPacket::unpack(Buffer& buffer,
 
 void Packet::pack(Buffer& buffer, int& offset) {
   int startOffset = offset;
-  for (std::unique_ptr<Field>& field : fields)
+  for (std::unique_ptr<IField>& field : fields)
     field->pack(buffer, offset);
 
-  lengthRef = offset - startOffset;
+  length = offset - startOffset;
 
   offset = startOffset;
-  for (std::unique_ptr<Field>& field : fields)
+  for (std::unique_ptr<IField>& field : fields)
     field->pack(buffer, offset);
 };
 
@@ -52,11 +59,11 @@ void Packet::unpack(Buffer& buffer,
                     int& offset,
                     std::optional<int> limitOffset) {
   int startOffset = offset;
-  lengthRef = 0;
-  for (std::unique_ptr<Field>& field : fields) {
-    if (lengthRef > 0 && (!limitOffset.has_value() ||
-                          startOffset + lengthRef < limitOffset.value()))
-      limitOffset = startOffset + lengthRef;
+  length = 0;
+  for (std::unique_ptr<IField>& field : fields) {
+    if (length > 0 && (!limitOffset.has_value() ||
+                       startOffset + length < limitOffset.value()))
+      limitOffset = startOffset + length;
     field->unpack(buffer, offset, limitOffset);
   }
 };
