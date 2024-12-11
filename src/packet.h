@@ -91,15 +91,17 @@ class Primitive : public Packer<T> {
   }
 };
 
-template <std::unsigned_integral T>
+template <typename T>
 class Vector : public Packer<std::vector<T>> {
  public:
-  Vector() : lengthRef(length), greedy(true) {}
-  Vector(uint32_t& lengthRef) : lengthRef(lengthRef), greedy(false) {}
+  Vector(std::unique_ptr<Packer<T>> packer)
+      : packer(std::move(packer)), lengthRef(length), greedy(true) {}
+  Vector(std::unique_ptr<Packer<T>> packer, uint32_t& lengthRef)
+      : packer(std::move(packer)), lengthRef(lengthRef), greedy(false) {}
 
   void pack(std::vector<T>& values, Buffer& buffer, int& offset) override {
     for (T& value : values)
-      packer.pack(value, buffer, offset);
+      packer->pack(value, buffer, offset);
 
     lengthRef = values.size();
   }
@@ -111,25 +113,26 @@ class Vector : public Packer<std::vector<T>> {
     int limit = getUnpackLimit(buffer, limitOffset);
     values.clear();
     for (int i = 0; greedy ? (offset < limit) : (i < lengthRef); i++) {
-      T value;
-      packer.unpack(value, buffer, offset, limitOffset);
-      values.push_back(value);
+      values.push_back(T());
+      packer->unpack(values.back(), buffer, offset, limitOffset);
     }
   }
 
  private:
-  Primitive<T> packer;
+  std::unique_ptr<Packer<T>> packer;
   uint32_t length = 0;
   uint32_t& lengthRef;
   const bool greedy;
 };
 
-template <std::unsigned_integral T, size_t N>
+template <typename T, size_t N>
 class Array : public Packer<std::array<T, N>> {
  public:
+  Array(std::unique_ptr<Packer<T>> packer) : packer(std::move(packer)) {}
+
   void pack(std::array<T, N>& values, Buffer& buffer, int& offset) override {
     for (T& value : values)
-      packer.pack(value, buffer, offset);
+      packer->pack(value, buffer, offset);
   }
 
   void unpack(std::array<T, N>& value,
@@ -137,11 +140,11 @@ class Array : public Packer<std::array<T, N>> {
               int& offset,
               std::optional<int> limitOffset) override {
     for (int i = 0; i < N; i++)
-      packer.unpack(value[i], buffer, offset, limitOffset);
+      packer->unpack(value[i], buffer, offset, limitOffset);
   }
 
  private:
-  Primitive<T> packer;
+  std::unique_ptr<Packer<T>> packer;
 };
 
 class WideString : public Packer<std::string> {
@@ -227,19 +230,22 @@ class Packet {
   // Non-greedy vector (length determined by lengthRef)
   template <std::unsigned_integral T>
   void field(std::vector<T>& values, uint32_t& lengthRef) {
-    ADD_FIELD(std::vector<T>, Vector<T>, lengthRef, values);
+    ADD_FIELD(std::vector<T>, Vector<T>,
+              std::make_unique<Primitive<T>>() COMMA() lengthRef, values);
   }
 
   // Greedy vector (consumes until end of buffer when unpacking)
   template <std::unsigned_integral T>
   void field(std::vector<T>& values) {
-    ADD_FIELD(std::vector<T>, Vector<T>, , values);
+    ADD_FIELD(std::vector<T>, Vector<T>, std::make_unique<Primitive<T>>(),
+              values);
   }
 
   // Fixed-length array
   template <std::unsigned_integral T, size_t N>
   void field(std::array<T, N>& values) {
-    ADD_FIELD(std::array<T COMMA() N>, Array<T COMMA() N>, , values);
+    ADD_FIELD(std::array<T COMMA() N>, Array<T COMMA() N>,
+              std::make_unique<Primitive<T>>(), values);
   }
 
   // String (encoded as 16 bits/char as in PTP)
