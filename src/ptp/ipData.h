@@ -11,28 +11,46 @@ enum class DataPhaseInfo : uint32_t {
 
 /* PTP/IP Packets */
 
-class InitCommandRequest : public Packet {
+class IpPacket : public Packet {
+ public:
+  uint32_t packetType = 0;
+
+  IpPacket(uint32_t packetType = 0) : packetType(packetType) {
+    field();
+    field(this->packetType);
+  }
+
+  template <typename T>
+    requires(std::derived_from<T, Packet>)
+  static std::unique_ptr<T> unpackAs(Buffer& buffer) {
+    return Packet::unpackAs<IpPacket, T>(buffer);
+  }
+
+  uint32_t getType() override { return packetType; }
+};
+
+class InitCommandRequest : public IpPacket {
  public:
   std::array<uint8_t, 16> guid = {};
   std::string name = "";
   uint32_t ptpVersion = 0x10000;
 
   InitCommandRequest(std::array<uint8_t, 16> guid = {}, std::string name = "")
-      : Packet(0x01), guid(guid), name(name) {
+      : IpPacket(0x01), guid(guid), name(name) {
     field(this->guid);
     field(this->name);
     field(this->ptpVersion);
   }
 };
 
-class InitCommandAck : public Packet {
+class InitCommandAck : public IpPacket {
  public:
   uint32_t connectionNum = 0;
   std::array<uint8_t, 16> guid = {};
   std::string name = "";
   uint32_t ptpVersion = 0x10000;
 
-  InitCommandAck() : Packet(0x02) {
+  InitCommandAck() : IpPacket(0x02) {
     field(this->connectionNum);
     field(this->guid);
     field(this->name);
@@ -40,29 +58,29 @@ class InitCommandAck : public Packet {
   }
 };
 
-class InitEventRequest : public Packet {
+class InitEventRequest : public IpPacket {
  public:
   uint32_t connectionNum = 0;
 
   InitEventRequest(uint32_t connectionNum = 0)
-      : Packet(0x03), connectionNum(connectionNum) {
+      : IpPacket(0x03), connectionNum(connectionNum) {
     field(this->connectionNum);
   }
 };
 
-class InitEventAck : public Packet {
+class InitEventAck : public IpPacket {
  public:
-  InitEventAck() : Packet(0x04) {}
+  InitEventAck() : IpPacket(0x04) {}
 };
 
-class InitFail : public Packet {
+class InitFail : public IpPacket {
  public:
   uint32_t reason = 0;
 
-  InitFail() : Packet(0x05) { field(this->reason); }
+  InitFail() : IpPacket(0x05) { field(this->reason); }
 };
 
-class OperationRequest : public Packet {
+class OperationRequest : public IpPacket {
  public:
   uint32_t dataPhase = 0;
   uint16_t operationCode = 0;
@@ -73,7 +91,7 @@ class OperationRequest : public Packet {
                    uint16_t operationCode = 0,
                    uint32_t transactionId = 0,
                    std::array<uint32_t, 5> params = {})
-      : Packet(0x06),
+      : IpPacket(0x06),
         dataPhase(dataPhase),
         operationCode(operationCode),
         transactionId(transactionId),
@@ -81,43 +99,43 @@ class OperationRequest : public Packet {
     field(this->dataPhase);
     field(this->operationCode);
     field(this->transactionId);
-    field(this->params);  // Greedy; consumes to end of buffer when unpacking
+    field(this->params);
   }
 };
 
-class OperationResponse : public Packet {
+class OperationResponse : public IpPacket {
  public:
   uint16_t responseCode = 0;
   uint32_t transactionId = 0;
   std::array<uint32_t, 5> params = {};
 
-  OperationResponse() : Packet(0x07) {
+  OperationResponse() : IpPacket(0x07) {
     field(this->responseCode);
     field(this->transactionId);
-    field(this->params);  // Greedy; consumes to end of buffer when unpacking
+    field(this->params);
   }
 };
 
-class Event : public Packet {
+class Event : public IpPacket {
  public:
   uint16_t eventCode = 0;
   uint32_t transactionId = 0;
   std::array<uint32_t, 3> params = {};
 
-  Event() : Packet(0x08) {
+  Event() : IpPacket(0x08) {
     field(this->eventCode);
     field(this->transactionId);
     field(this->params);
   }
 };
 
-class StartData : public Packet {
+class StartData : public IpPacket {
  public:
   uint32_t transactionId = 0;
   uint64_t totalDataLength = 0;
 
   StartData(uint32_t transactionId = 0, uint64_t totalDataLength = 0)
-      : Packet(0x09),
+      : IpPacket(0x09),
         transactionId(transactionId),
         totalDataLength(totalDataLength) {
     field(this->transactionId);
@@ -125,44 +143,44 @@ class StartData : public Packet {
   }
 };
 
-class Data : public Packet {
+class Data : public IpPacket {
  public:
   uint32_t transactionId = 0;
   Buffer payload;
 
-  Data() : Packet(0x0a) {
+  Data() : IpPacket(0x0a) {
     field(this->transactionId);
-    field(this->payload);  // Greedy; consumes to end of buffer when unpacking
+    field(this->payload);
   }
 };
 
-class Cancel : public Packet {
+class Cancel : public IpPacket {
  public:
   uint32_t transactionId = 0;
 
-  Cancel() : Packet(0x0b) { field(this->transactionId); }
+  Cancel() : IpPacket(0x0b) { field(this->transactionId); }
 };
 
-class EndData : public Packet {
+class EndData : public IpPacket {
  public:
   uint32_t transactionId = 0;
   Buffer payload;
 
   EndData(uint32_t transactionId = 0, Buffer payload = {})
-      : Packet(0x0c), transactionId(transactionId), payload(payload) {
+      : IpPacket(0x0c), transactionId(transactionId), payload(payload) {
     field(this->transactionId);
-    field(this->payload);  // Greedy; consumes to end of buffer when unpacking
+    field(this->payload);
   }
 };
 
-class Ping : public Packet {
+class Ping : public IpPacket {
  public:
-  Ping() : Packet(0x0d) {}
+  Ping() : IpPacket(0x0d) {}
 };
 
-class Pong : public Packet {
+class Pong : public IpPacket {
  public:
-  Pong() : Packet(0x0e) {}
+  Pong() : IpPacket(0x0e) {}
 };
 
 #endif
