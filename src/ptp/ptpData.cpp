@@ -12,7 +12,7 @@ void PTPString::pack(Buffer& buffer, int& offset) {
 void PTPString::unpack(Buffer& buffer,
                        int& offset,
                        std::optional<int> limitOffset) {
-  int limit = getUnpackLimit(buffer, limitOffset);
+  int limit = getUnpackLimit(buffer.size(), limitOffset);
   // Deal with "empty" string, which consists of a single 0x00 byte
   if (offset >= limit || buffer[offset] == 0x00) {
     numChars = 0;

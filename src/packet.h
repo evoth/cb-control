@@ -10,21 +10,11 @@
 #include <string>
 #include <vector>
 
-// TODO: Implement switches (based on variants) + vectors to support choice
-//       packet vectors
-// TODO: Implement typeRef system similar to lengthRef? How to support other
-//       data types for lengthRef/typeRef without over-templating everything?
-//       (std::variant?)
-
 typedef std::vector<unsigned char> Buffer;
 class Packet;
 
-template <typename T, typename... Args>
-concept ChoiceType =
-    std::derived_from<T, Packet> && (std::derived_from<Args, T> && ...);
-
 // TODO: Move this somewhere else?
-int getUnpackLimit(Buffer& buffer, std::optional<int> limitOffset);
+int getUnpackLimit(int hardLimit, std::optional<int> limitOffset);
 
 template <typename T>
 class Packer {
@@ -84,7 +74,7 @@ class Primitive : public Packer<T> {
               Buffer& buffer,
               int& offset,
               std::optional<int> limitOffset) override {
-    int limit = getUnpackLimit(buffer, limitOffset);
+    int limit = getUnpackLimit(buffer.size(), limitOffset);
     value = 0;
     for (int i = 0; i < sizeof(T); i++) {
       // Current behavior will assume byte=0x00 if out of range
@@ -96,6 +86,7 @@ class Primitive : public Packer<T> {
   }
 };
 
+// TODO: Use SpecialProp for length
 template <typename T>
 class Vector : public Packer<std::vector<T>> {
  public:
@@ -115,7 +106,7 @@ class Vector : public Packer<std::vector<T>> {
               Buffer& buffer,
               int& offset,
               std::optional<int> limitOffset) override {
-    int limit = getUnpackLimit(buffer, limitOffset);
+    int limit = getUnpackLimit(buffer.size(), limitOffset);
     values.clear();
     for (int i = 0; greedy ? (offset < limit) : (i < lengthRef); i++) {
       values.push_back(T());
@@ -173,36 +164,32 @@ class NestedPacket : public Packer<Packet> {
               std::optional<int> limitOffset) override;
 };
 
-// TODO: Delete after I make PacketBuffer
-template <typename T, typename... Args>
-  requires ChoiceType<T, Args...>
-class PacketChoice : public Packer<std::unique_ptr<T>> {
+template <typename T>
+  requires std::derived_from<T, Packet>
+class PacketBuffer : public Packer<Buffer> {
  public:
-  void pack(std::unique_ptr<T>& value, Buffer& buffer, int& offset) override {
-    if (value)
-      value->pack(buffer, offset);
+  PacketBuffer() : packer(std::make_unique<Primitive<unsigned char>>()) {}
+
+  void pack(Buffer& value, Buffer& buffer, int& offset) override {
+    packer.pack(value, buffer, offset);
   }
 
-  void unpack(std::unique_ptr<T>& value,
+  void unpack(Buffer& value,
               Buffer& buffer,
               int& offset,
               std::optional<int> limitOffset) override {
     int startOffset = offset;
-    std::unique_ptr<T> basePacket = std::make_unique<T>();
-    basePacket->unpack(buffer, offset, limitOffset);
+    lengthPacket.unpack(buffer, offset, limitOffset);
 
-    std::unique_ptr<T> result;
-    ((result = std::move(basePacket->template is<Args>())) || ...);
-
-    if (!result) {
-      value = std::move(basePacket);
-      return;
-    }
-
+    limitOffset =
+        getUnpackLimit(startOffset + lengthPacket.getLength(), limitOffset);
     offset = startOffset;
-    result->unpack(buffer, offset, limitOffset);
-    value = std::move(result);
+    packer.unpack(value, buffer, offset, limitOffset);
   }
+
+ private:
+  T lengthPacket;
+  Vector<unsigned char> packer;
 };
 
 class ISpecialPropRef {
@@ -278,11 +265,8 @@ class Packet {
     return nullptr;
   }
 
-  // TODO: Delete after I make PacketBuffer
-  template <typename T, typename U>
-  static T* cast(std::unique_ptr<U>& ptr) {
-    return dynamic_cast<T*>(ptr.get());
-  }
+  uint32_t getLength() { return _length.get(); }
+  uint32_t getType() { return _type.get(); }
 
  protected:
 #define COMMA() ,
@@ -325,13 +309,20 @@ class Packet {
   // Nested packet (packed/unpacked in place)
   void field(Packet& value) { ADD_FIELD(Packet, NestedPacket, , value); }
 
-  // TODO: Delete after I make PacketBuffer
-  // Choice of packets which share a base type, which is dynamically unpacked
-  // into an object instance based on type field
-  template <typename T, typename... Args>
-    requires ChoiceType<T, Args...>
-  void field(std::unique_ptr<T>& value) {
-    ADD_FIELD(std::unique_ptr<T>, PacketChoice<T COMMA() Args...>, , value);
+  // Buffer which automagically reads the length of a nested packet and only
+  // consumes the respective number of bytes
+  template <typename T>
+    requires std::derived_from<T, Packet>
+  void field(Buffer& value) {
+    ADD_FIELD(Buffer, PacketBuffer<T>, , value);
+  }
+
+  // Vector of PacketBuffers
+  template <typename T>
+    requires std::derived_from<T, Packet>
+  void field(std::vector<Buffer>& values) {
+    ADD_FIELD(std::vector<Buffer>, Vector<Buffer>,
+              std::make_unique<PacketBuffer<T>>(), values);
   }
 
   // Special length field which is automatically populated with the packet

@@ -1,10 +1,9 @@
 #include "packet.h"
 
-int getUnpackLimit(Buffer& buffer, std::optional<int> limitOffset) {
-  int limit = buffer.size();
-  if (limitOffset.has_value() && limitOffset.value() < limit)
-    limit = limitOffset.value();
-  return limit;
+int getUnpackLimit(int hardLimit, std::optional<int> limitOffset) {
+  if (limitOffset.has_value() && limitOffset.value() < hardLimit)
+    hardLimit = limitOffset.value();
+  return hardLimit;
 }
 
 void WideString::pack(std::string& value, Buffer& buffer, int& offset) {
@@ -21,7 +20,7 @@ void WideString::unpack(std::string& value,
                         Buffer& buffer,
                         int& offset,
                         std::optional<int> limitOffset) {
-  int limit = getUnpackLimit(buffer, limitOffset);
+  int limit = getUnpackLimit(buffer.size(), limitOffset);
   uint16_t wideChar;
   value.clear();
   while (offset < limit) {
@@ -61,10 +60,8 @@ void Packet::unpack(Buffer& buffer,
   int startOffset = offset;
   _length.set(0);
   for (std::unique_ptr<IField>& field : fields) {
-    if (_length.get() > 0 &&
-        (!limitOffset.has_value() ||
-         startOffset + _length.get() < limitOffset.value()))
-      limitOffset = startOffset + _length.get();
+    if (_length.get() > 0)
+      limitOffset = getUnpackLimit(startOffset + _length.get(), limitOffset);
     field->unpack(buffer, offset, limitOffset);
   }
 };

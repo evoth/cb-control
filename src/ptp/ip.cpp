@@ -18,11 +18,10 @@ void Socket::recvPacket(Buffer& buffer, unsigned int timeoutMs) {
     throw PTPTransportException(
         "Socket timed out while receiving length of next packet.");
 
-  uint32_t length;
-  int offset = 0;
-  Primitive<uint32_t>().unpack(length, buffer, offset, std::nullopt);
+  IpPacket lengthPacket;
+  lengthPacket.unpack(buffer);
 
-  targetBytes = length - targetBytes;
+  targetBytes = lengthPacket.getLength() - targetBytes;
   if (recv(buffer, targetBytes, timeoutMs) < targetBytes)
     throw PTPTransportException(
         "Socket timed out while receiving packet body.");
