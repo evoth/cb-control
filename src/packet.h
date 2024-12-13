@@ -4,6 +4,7 @@
 #include <array>
 #include <concepts>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -172,6 +173,7 @@ class NestedPacket : public Packer<Packet> {
               std::optional<int> limitOffset) override;
 };
 
+// TODO: Delete after I make PacketBuffer
 template <typename T, typename... Args>
   requires ChoiceType<T, Args...>
 class PacketChoice : public Packer<std::unique_ptr<T>> {
@@ -203,6 +205,47 @@ class PacketChoice : public Packer<std::unique_ptr<T>> {
   }
 };
 
+class ISpecialPropRef {
+ public:
+  virtual uint32_t get() = 0;
+  virtual void set(uint32_t newValue) = 0;
+};
+
+template <std::unsigned_integral T>
+class SpecialPropRef : public ISpecialPropRef {
+ public:
+  SpecialPropRef(T& value) : value(value) {}
+
+  uint32_t get() override { return static_cast<uint32_t>(value); }
+
+  void set(uint32_t newValue) override { value = static_cast<T>(newValue); }
+
+ private:
+  T& value;
+};
+
+class SpecialProp {
+ public:
+  uint32_t get() {
+    if (prop)
+      return prop->get();
+    return 0;
+  }
+
+  void set(uint32_t value) {
+    if (prop)
+      prop->set(value);
+  }
+
+  template <std::unsigned_integral T>
+  void bind(T& ref) {
+    prop = std::make_unique<SpecialPropRef<T>>(ref);
+  }
+
+ private:
+  std::unique_ptr<ISpecialPropRef> prop;
+};
+
 // TODO: The overloading on field is kind of fun but hurts readability
 class Packet {
  public:
@@ -214,13 +257,11 @@ class Packet {
   Buffer pack();
   void unpack(Buffer& buffer);
 
-  virtual uint32_t getType() { return 0; }
-
   template <typename T>
     requires(std::derived_from<T, Packet>)
   std::unique_ptr<T> is() {
     std::unique_ptr<T> testPacket = std::make_unique<T>();
-    if (getType() == testPacket->getType())
+    if (_type.get() == testPacket->_type.get())
       return testPacket;
     return nullptr;
   }
@@ -237,6 +278,7 @@ class Packet {
     return nullptr;
   }
 
+  // TODO: Delete after I make PacketBuffer
   template <typename T, typename U>
   static T* cast(std::unique_ptr<U>& ptr) {
     return dynamic_cast<T*>(ptr.get());
@@ -261,7 +303,7 @@ class Packet {
               std::make_unique<Primitive<T>>() COMMA() lengthRef, values);
   }
 
-  // Greedy vector (consumes until end of buffer when unpacking)
+  // Greedy vector (consumes until end of packet when unpacking)
   template <std::unsigned_integral T>
   void field(std::vector<T>& values) {
     ADD_FIELD(std::vector<T>, Vector<T>, std::make_unique<Primitive<T>>(),
@@ -283,8 +325,9 @@ class Packet {
   // Nested packet (packed/unpacked in place)
   void field(Packet& value) { ADD_FIELD(Packet, NestedPacket, , value); }
 
+  // TODO: Delete after I make PacketBuffer
   // Choice of packets which share a base type, which is dynamically unpacked
-  // into an object instance based on getType()
+  // into an object instance based on type field
   template <typename T, typename... Args>
     requires ChoiceType<T, Args...>
   void field(std::unique_ptr<T>& value) {
@@ -293,16 +336,25 @@ class Packet {
 
   // Special length field which is automatically populated with the packet
   // length when unpacking
-  void field() {
-    fields.push_back(std::make_unique<Field<uint32_t>>(
-        std::make_unique<Primitive<uint32_t>>(), length));
+  template <std::unsigned_integral T>
+  void lengthField(T& value) {
+    field(value);
+    _length.bind(value);
+  }
+
+  // Special type field which is used when conditionally unpacking
+  template <std::unsigned_integral T>
+  void typeField(T& value) {
+    field(value);
+    _type.bind(value);
   }
 
 #undef ADD_FIELD
 #undef COMMA
 
  private:
-  uint32_t length = 0;
+  SpecialProp _length;
+  SpecialProp _type;
   std::vector<std::unique_ptr<IField>> fields;
 };
 

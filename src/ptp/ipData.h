@@ -13,11 +13,12 @@ enum class DataPhaseInfo : uint32_t {
 
 class IpPacket : public Packet {
  public:
+  uint32_t length = 0;
   uint32_t packetType = 0;
 
   IpPacket(uint32_t packetType = 0) : packetType(packetType) {
-    field();
-    field(this->packetType);
+    lengthField(length);
+    typeField(this->packetType);
   }
 
   template <typename T>
@@ -25,8 +26,6 @@ class IpPacket : public Packet {
   static std::unique_ptr<T> unpackAs(Buffer& buffer) {
     return Packet::unpackAs<IpPacket, T>(buffer);
   }
-
-  uint32_t getType() override { return packetType; }
 };
 
 class InitCommandRequest : public IpPacket {

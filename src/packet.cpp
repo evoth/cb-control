@@ -48,7 +48,7 @@ void Packet::pack(Buffer& buffer, int& offset) {
   for (std::unique_ptr<IField>& field : fields)
     field->pack(buffer, offset);
 
-  length = offset - startOffset;
+  _length.set(offset - startOffset);
 
   offset = startOffset;
   for (std::unique_ptr<IField>& field : fields)
@@ -59,11 +59,12 @@ void Packet::unpack(Buffer& buffer,
                     int& offset,
                     std::optional<int> limitOffset) {
   int startOffset = offset;
-  length = 0;
+  _length.set(0);
   for (std::unique_ptr<IField>& field : fields) {
-    if (length > 0 && (!limitOffset.has_value() ||
-                       startOffset + length < limitOffset.value()))
-      limitOffset = startOffset + length;
+    if (_length.get() > 0 &&
+        (!limitOffset.has_value() ||
+         startOffset + _length.get() < limitOffset.value()))
+      limitOffset = startOffset + _length.get();
     field->unpack(buffer, offset, limitOffset);
   }
 };

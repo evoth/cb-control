@@ -7,17 +7,16 @@
 // TODO: Support other datatypes using template?
 class CanonDeviceProp : public Packet {
  public:
+  uint32_t length = 0;
   uint32_t devicePropertyCode = 0;
   uint32_t value = 0;
 
   CanonDeviceProp(uint32_t devicePropertyCode = 0, uint32_t value = 0)
       : devicePropertyCode(devicePropertyCode), value(value) {
-    field();
-    field(this->devicePropertyCode);
+    lengthField(length);
+    typeField(this->devicePropertyCode);
     field(this->value);
   }
-
-  uint32_t getType() override { return devicePropertyCode; }
 };
 
 /* Canon vendor PTP Enums */
