@@ -16,6 +16,47 @@ class Packet;
 // TODO: Move this somewhere else?
 int getUnpackLimit(int hardLimit, std::optional<int> limitOffset);
 
+class ISpecialPropRef {
+ public:
+  virtual uint32_t get() = 0;
+  virtual void set(uint32_t newValue) = 0;
+};
+
+template <std::unsigned_integral T>
+class SpecialPropRef : public ISpecialPropRef {
+ public:
+  SpecialPropRef(T& value) : value(value) {}
+
+  uint32_t get() override { return static_cast<uint32_t>(value); }
+
+  void set(uint32_t newValue) override { value = static_cast<T>(newValue); }
+
+ private:
+  T& value;
+};
+
+class SpecialProp {
+ public:
+  uint32_t get() {
+    if (prop)
+      return prop->get();
+    return 0;
+  }
+
+  void set(uint32_t value) {
+    if (prop)
+      prop->set(value);
+  }
+
+  template <std::unsigned_integral T>
+  void bind(T& ref) {
+    prop = std::make_unique<SpecialPropRef<T>>(ref);
+  }
+
+ private:
+  std::unique_ptr<ISpecialPropRef> prop;
+};
+
 template <typename T>
 class Packer {
  public:
@@ -86,20 +127,21 @@ class Primitive : public Packer<T> {
   }
 };
 
-// TODO: Use SpecialProp for length
-template <typename T>
+template <typename T, std::unsigned_integral U = uint32_t>
 class Vector : public Packer<std::vector<T>> {
  public:
   Vector(std::unique_ptr<Packer<T>> packer)
-      : packer(std::move(packer)), lengthRef(length), greedy(true) {}
-  Vector(std::unique_ptr<Packer<T>> packer, uint32_t& lengthRef)
-      : packer(std::move(packer)), lengthRef(lengthRef), greedy(false) {}
+      : packer(std::move(packer)), greedy(true) {}
+  Vector(std::unique_ptr<Packer<T>> packer, U& lengthRef)
+      : packer(std::move(packer)), greedy(false) {
+    _length.bind(lengthRef);
+  }
 
   void pack(std::vector<T>& values, Buffer& buffer, int& offset) override {
     for (T& value : values)
       packer->pack(value, buffer, offset);
 
-    lengthRef = values.size();
+    _length.set(values.size());
   }
 
   void unpack(std::vector<T>& values,
@@ -108,7 +150,7 @@ class Vector : public Packer<std::vector<T>> {
               std::optional<int> limitOffset) override {
     int limit = getUnpackLimit(buffer.size(), limitOffset);
     values.clear();
-    for (int i = 0; greedy ? (offset < limit) : (i < lengthRef); i++) {
+    for (int i = 0; greedy ? (offset < limit) : (i < _length.get()); i++) {
       values.push_back(T());
       packer->unpack(values.back(), buffer, offset, limitOffset);
     }
@@ -116,8 +158,7 @@ class Vector : public Packer<std::vector<T>> {
 
  private:
   std::unique_ptr<Packer<T>> packer;
-  uint32_t length = 0;
-  uint32_t& lengthRef;
+  SpecialProp _length;
   const bool greedy;
 };
 
@@ -192,47 +233,6 @@ class PacketBuffer : public Packer<Buffer> {
   Vector<unsigned char> packer;
 };
 
-class ISpecialPropRef {
- public:
-  virtual uint32_t get() = 0;
-  virtual void set(uint32_t newValue) = 0;
-};
-
-template <std::unsigned_integral T>
-class SpecialPropRef : public ISpecialPropRef {
- public:
-  SpecialPropRef(T& value) : value(value) {}
-
-  uint32_t get() override { return static_cast<uint32_t>(value); }
-
-  void set(uint32_t newValue) override { value = static_cast<T>(newValue); }
-
- private:
-  T& value;
-};
-
-class SpecialProp {
- public:
-  uint32_t get() {
-    if (prop)
-      return prop->get();
-    return 0;
-  }
-
-  void set(uint32_t value) {
-    if (prop)
-      prop->set(value);
-  }
-
-  template <std::unsigned_integral T>
-  void bind(T& ref) {
-    prop = std::make_unique<SpecialPropRef<T>>(ref);
-  }
-
- private:
-  std::unique_ptr<ISpecialPropRef> prop;
-};
-
 // TODO: The overloading on field is kind of fun but hurts readability
 class Packet {
  public:
@@ -281,9 +281,9 @@ class Packet {
   }
 
   // Non-greedy vector (length determined by lengthRef)
-  template <std::unsigned_integral T>
-  void field(std::vector<T>& values, uint32_t& lengthRef) {
-    ADD_FIELD(std::vector<T>, Vector<T>,
+  template <std::unsigned_integral T, std::unsigned_integral U>
+  void field(std::vector<T>& values, U& lengthRef) {
+    ADD_FIELD(std::vector<T>, Vector<T COMMA() U>,
               std::make_unique<Primitive<T>>() COMMA() lengthRef, values);
   }
 

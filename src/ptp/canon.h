@@ -27,8 +27,11 @@ class CanonPTPCamera : public PTPCamera {
   bool isEos();
   bool isEosM();
 
-  // TODO: Support other datatypes using template?
-  void setEosDeviceProp(uint32_t devicePropertyCode, uint32_t value);
+  template <std::unsigned_integral T>
+  void setEosDeviceProp(uint32_t devicePropertyCode, T value) {
+    send(CanonOperationCode::EOSSetDevicePropValueEx, {},
+         CanonDeviceProp<T>(devicePropertyCode, value).pack());
+  }
 };
 
 #endif

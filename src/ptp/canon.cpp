@@ -83,9 +83,3 @@ bool CanonPTPCamera::isEosM() {
 
   // TODO: Include Powershot models with similar firmware?
 }
-
-void CanonPTPCamera::setEosDeviceProp(uint32_t devicePropertyCode,
-                                      uint32_t value) {
-  send(CanonOperationCode::EOSSetDevicePropValueEx, {},
-       CanonDeviceProp(devicePropertyCode, value).pack());
-}

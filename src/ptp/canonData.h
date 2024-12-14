@@ -4,14 +4,14 @@
 #include "../packet.h"
 #include "ptp.h"
 
-// TODO: Support other datatypes using template?
+template <std::unsigned_integral T>
 class CanonDeviceProp : public Packet {
  public:
   uint32_t length = 0;
   uint32_t devicePropertyCode = 0;
-  uint32_t value = 0;
+  T value = 0;
 
-  CanonDeviceProp(uint32_t devicePropertyCode = 0, uint32_t value = 0)
+  CanonDeviceProp(uint32_t devicePropertyCode = 0, T value = 0)
       : devicePropertyCode(devicePropertyCode), value(value) {
     lengthField(length);
     typeField(this->devicePropertyCode);
