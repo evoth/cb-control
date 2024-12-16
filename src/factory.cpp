@@ -18,7 +18,7 @@ std::unique_ptr<Camera> PTPFactory::create() {
 
   // Canon doesn't seem to use their designated VendorExtensionID, so we check
   // the manufacturer string instead
-  if (deviceInfo.manufacturer.string.find("Canon") != std::string::npos) {
+  if (deviceInfo.manufacturer.find("Canon") != std::string::npos) {
     Logger::log("Detected Canon camera.");
     return std::make_unique<CanonPTPCamera>(std::move(ptp));
   }

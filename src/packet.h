@@ -97,7 +97,7 @@ class Field : public IField {
   T& value;
 };
 
-template <std::unsigned_integral T>
+template <std::integral T>
 class Primitive : public Packer<T> {
  public:
   void pack(T& value, Buffer& buffer, int& offset) override {
@@ -150,7 +150,7 @@ class Vector : public Packer<std::vector<T>> {
               std::optional<int> limitOffset) override {
     int limit = getUnpackLimit(buffer.size(), limitOffset);
     values.clear();
-    for (int i = 0; greedy ? (offset < limit) : (i < _length.get()); i++) {
+    for (int i = 0; offset < limit && (greedy || i < _length.get()); i++) {
       values.push_back(T());
       packer->unpack(values.back(), buffer, offset, limitOffset);
     }
@@ -196,6 +196,7 @@ class WideString : public Packer<std::string> {
   Primitive<uint16_t> packer;
 };
 
+// TODO: Get rid of this since Packet can be its own field?
 class NestedPacket : public Packer<Packet> {
  public:
   void pack(Packet& value, Buffer& buffer, int& offset) override;
@@ -234,12 +235,12 @@ class PacketBuffer : public Packer<Buffer> {
 };
 
 // TODO: The overloading on field is kind of fun but hurts readability
-class Packet {
+class Packet : public IField {
  public:
-  virtual void pack(Buffer& buffer, int& offset);
+  virtual void pack(Buffer& buffer, int& offset) override;
   virtual void unpack(Buffer& buffer,
                       int& offset,
-                      std::optional<int> limitOffset = std::nullopt);
+                      std::optional<int> limitOffset = std::nullopt) override;
 
   Buffer pack();
   void unpack(Buffer& buffer);
@@ -268,34 +269,33 @@ class Packet {
   uint32_t getLength() { return _length.get(); }
   uint32_t getType() { return _type.get(); }
 
- protected:
 #define COMMA() ,
 #define ADD_FIELD(T_FIELD, T_PACKER, PACKER_ARG, VALUE) \
   fields.push_back(std::make_unique<Field<T_FIELD>>(    \
       std::make_unique<T_PACKER>(PACKER_ARG), VALUE))
 
-  // Primitive (only unsigned int for now)
-  template <std::unsigned_integral T>
+  // Primitive (int for now)
+  template <std::integral T>
   void field(T& value) {
     ADD_FIELD(T, Primitive<T>, , value);
   }
 
   // Non-greedy vector (length determined by lengthRef)
-  template <std::unsigned_integral T, std::unsigned_integral U>
+  template <std::integral T, std::unsigned_integral U>
   void field(std::vector<T>& values, U& lengthRef) {
     ADD_FIELD(std::vector<T>, Vector<T COMMA() U>,
               std::make_unique<Primitive<T>>() COMMA() lengthRef, values);
   }
 
   // Greedy vector (consumes until end of packet when unpacking)
-  template <std::unsigned_integral T>
+  template <std::integral T>
   void field(std::vector<T>& values) {
     ADD_FIELD(std::vector<T>, Vector<T>, std::make_unique<Primitive<T>>(),
               values);
   }
 
   // Fixed-length array
-  template <std::unsigned_integral T, size_t N>
+  template <std::integral T, size_t N>
   void field(std::array<T, N>& values) {
     ADD_FIELD(std::array<T COMMA() N>, Array<T COMMA() N>,
               std::make_unique<Primitive<T>>(), values);
@@ -343,10 +343,12 @@ class Packet {
 #undef ADD_FIELD
 #undef COMMA
 
+ protected:
+  std::vector<std::unique_ptr<IField>> fields;
+
  private:
   SpecialProp _length;
   SpecialProp _type;
-  std::vector<std::unique_ptr<IField>> fields;
 };
 
 #endif

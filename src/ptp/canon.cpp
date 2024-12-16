@@ -79,7 +79,7 @@ bool CanonPTPCamera::isEosM() {
   if (!isOpSupported(CanonOperationCode::EOSSetRemoteMode))
     return false;
 
-  return getCachedDI()->model.string.find("Canon EOS M") != std::string::npos;
+  return getCachedDI()->model.find("Canon EOS M") != std::string::npos;
 
   // TODO: Include Powershot models with similar firmware?
 }

@@ -3,6 +3,50 @@
 
 #include "../packet.h"
 
+#include <exception>
+#include <map>
+#include <typeindex>
+#include <typeinfo>
+
+// TODO: Figure out where to catch and deal with exceptions (probably within
+// PTP class)
+
+class PTPException : public std::exception {
+ public:
+  template <typename... Args>
+  PTPException(const char* format, Args... args) {
+    snprintf(msg, sizeof(msg), format, args...);
+  }
+
+  virtual const char* what() const noexcept override { return msg; }
+
+ private:
+  char msg[256];
+};
+
+class PTPOperationException : public PTPException {
+ public:
+  const int errorCode;
+
+  PTPOperationException(uint32_t responseCode)
+      : PTPException("PTP Operation Error: 0x%04x", responseCode),
+        errorCode(responseCode) {}
+};
+
+class PTPTransportException : public PTPException {
+ public:
+  template <typename... Args>
+  PTPTransportException(const char* format, Args... args)
+      : PTPException(format, args...) {}
+};
+
+class PTPCameraException : public PTPException {
+ public:
+  template <typename... Args>
+  PTPCameraException(const char* format, Args... args)
+      : PTPException(format, args...) {}
+};
+
 struct OperationRequestData {
   const bool dataPhase;
   const bool sending;
@@ -40,13 +84,13 @@ struct OperationResponseData {
       : responseCode(responseCode), params(params), data(std::move(data)) {}
 };
 
-template <std::unsigned_integral T>
+template <std::integral T>
 class PTPArray : public Packet {
  public:
   uint32_t numElements = 0;
-  std::vector<T> array;
+  std::vector<T>& array;
 
-  PTPArray() {
+  PTPArray(std::vector<T>& array) : array(array) {
     field(this->numElements);
     field(this->array, numElements);
   }
@@ -55,9 +99,9 @@ class PTPArray : public Packet {
 class PTPString : public Packet {
  public:
   uint8_t numChars = 0;
-  std::string string;
+  std::string& string;
 
-  PTPString() {
+  PTPString(std::string& string) : string(string) {
     field(this->numChars);
     field(this->string);
   }
@@ -72,22 +116,36 @@ class PTPString : public Packet {
   static const int MAX_CHARS = 254;
 };
 
-class DeviceInfo : public Packet {
+class PTPPacket : public Packet {
+ public:
+  using Packet::field;
+
+  template <std::integral T>
+  void field(std::vector<T>& values) {
+    fields.push_back(std::make_unique<PTPArray<T>>(values));
+  }
+
+  void field(std::string& value) {
+    fields.push_back(std::make_unique<PTPString>(value));
+  }
+};
+
+class DeviceInfo : public PTPPacket {
  public:
   uint16_t standardVersion = 0;
   uint32_t vendorExtensionId = 0;
   uint16_t vendorExtensionVersion = 0;
-  PTPString vendorExtensionDesc;
+  std::string vendorExtensionDesc;
   uint16_t functionalMode = 0;
-  PTPArray<uint16_t> operationsSupported;
-  PTPArray<uint16_t> eventsSupported;
-  PTPArray<uint16_t> devicePropertiesSupported;
-  PTPArray<uint16_t> captureFormats;
-  PTPArray<uint16_t> imageFormats;
-  PTPString manufacturer;
-  PTPString model;
-  PTPString deviceVersion;
-  PTPString serialNumber;
+  std::vector<uint16_t> operationsSupported;
+  std::vector<uint16_t> eventsSupported;
+  std::vector<uint16_t> devicePropertiesSupported;
+  std::vector<uint16_t> captureFormats;
+  std::vector<uint16_t> imageFormats;
+  std::string manufacturer;
+  std::string model;
+  std::string deviceVersion;
+  std::string serialNumber;
 
   DeviceInfo() {
     field(this->standardVersion);
@@ -109,10 +167,102 @@ class DeviceInfo : public Packet {
   bool isOpSupported(uint16_t operationCode, uint32_t vendorExtensionId = 0);
 };
 
+extern const std::unordered_map<std::type_index, uint16_t> DataTypeMap;
+
+template <typename T>
+class DevicePropDesc : public PTPPacket {
+ public:
+  uint16_t devicePropertyCode = 0;
+  uint16_t dataType = 0;
+  uint8_t getSet = 0;
+  T factoryDefaultValue;
+  T currentValue;
+  Buffer form;
+
+  DevicePropDesc() {
+    if (!DataTypeMap.contains(typeid(T))) {
+      // TODO: Specific exception type
+      throw PTPException("Unsupported DevicePropValue type.");
+    }
+    dataType = DataTypeMap.at(typeid(T));
+
+    field(this->devicePropertyCode);
+    typeField(this->dataType);
+    field(this->getSet);
+    field(this->factoryDefaultValue);
+    field(this->currentValue);
+    Packet::field(this->form);
+  }
+};
+
+class PropDescForm : public Packet {
+ public:
+  uint8_t formFlag = 0;
+
+  PropDescForm(uint8_t formFlag = 0) : formFlag(formFlag) {
+    typeField(this->formFlag);
+  }
+};
+
+template <std::integral T>
+class PropDescRange : public PropDescForm {
+ public:
+  T minimumValue = 0;
+  T maximumValue = 0;
+  T stepSize = 0;
+
+  PropDescRange() : PropDescForm(0x01) {
+    field(this->minimumValue);
+    field(this->maximumValue);
+    field(this->stepSize);
+  }
+};
+
+// TODO: Will this only ever be integral? Or should it stay like this to support
+// other types?
+template <typename T>
+class PropDescEnum : public PropDescForm {
+ public:
+  uint16_t numValues = 0;
+  std::vector<T> supportedValues;
+
+  PropDescEnum() : PropDescForm(0x02) {
+    field(this->numValues);
+    field(this->supportedValues, numValues);
+  }
+};
+
 /* PTP Enums */
 // TODO: Figure out a cleaner way to do this? An OperationCode should be easily
 // comparable against uint16_t and passed as uint16_t to functions because
 // different PTPs will have vendor-specific operation codes
+
+namespace DataType {
+enum DataType : uint16_t {
+  UNDEF = 0x0000,
+  INT8 = 0x0001,
+  UINT8 = 0x0002,
+  INT16 = 0x0003,
+  UINT16 = 0x0004,
+  INT32 = 0x0005,
+  UINT32 = 0x0006,
+  INT64 = 0x0007,
+  UINT64 = 0x0008,
+  INT128 = 0x0009,
+  UINT128 = 0x000A,
+  AINT8 = 0x4001,
+  AUINT8 = 0x4002,
+  AINT16 = 0x4003,
+  AUINT16 = 0x4004,
+  AINT32 = 0x4005,
+  AUINT32 = 0x4006,
+  AINT64 = 0x4007,
+  AUINT64 = 0x4008,
+  AINT128 = 0x4009,
+  AUINT128 = 0x400A,
+  STR = 0xFFFF,
+};
+}
 
 namespace OperationCode {
 enum OperationCode : uint16_t {

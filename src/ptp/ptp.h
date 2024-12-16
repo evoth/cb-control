@@ -5,52 +5,8 @@
 #include "../logger.h"
 #include "ptpData.h"
 
-#include <exception>
 #include <mutex>
 #include <utility>
-
-// TODO: Figure out where to catch and deal with exceptions (probably within
-// PTP class)
-
-class PTPOperationException : public std::exception {
- public:
-  const int errorCode;
-
-  PTPOperationException(uint32_t responseCode) : errorCode(responseCode) {
-    snprintf(msg, sizeof(msg), "PTP Operation Error: 0x%04x", responseCode);
-  }
-
-  const char* what() const noexcept override { return msg; }
-
- private:
-  char msg[32];
-};
-
-class PTPTransportException : public std::exception {
- public:
-  template <typename... Args>
-  PTPTransportException(const char* format, Args... args) {
-    snprintf(msg, sizeof(msg), format, args...);
-  }
-
-  const char* what() const noexcept override { return msg; }
-
- private:
-  char msg[256];
-};
-
-class PTPCameraException : public std::exception {
- public:
-  template <typename... Args>
-  PTPCameraException(const char* format, Args... args) {
-    snprintf(msg, sizeof(msg), format, args...);
-  }
-
-  const char* what() const noexcept override { return msg; }
-
- private:
-  char msg[256];
-};
 
 struct EventData {
   const uint16_t eventCode;
@@ -100,6 +56,17 @@ class PTP {
   virtual void openSession();
   virtual void closeSession();
   virtual DeviceInfo getDeviceInfo();
+
+  template <typename T>
+  std::unique_ptr<DevicePropDesc<T>> getDevicePropDesc(
+      uint32_t devicePropCode) {
+    Buffer data = recv(OperationCode::GetDevicePropDesc, {devicePropCode}).data;
+    if (auto devicePropDesc =
+            Packet::unpackAs<DevicePropDesc<T>, DevicePropDesc<T>>(data))
+      return devicePropDesc;
+    throw PTPException(
+        "Unable to unpack DevicePropDesc; wrong data type provided.");
+  }
 
  protected:
   std::unique_ptr<PTPTransport> transport;

@@ -18,7 +18,7 @@ void Socket::recvPacket(Buffer& buffer, unsigned int timeoutMs) {
     throw PTPTransportException(
         "Socket timed out while receiving length of next packet.");
 
-  IpPacket lengthPacket;
+  IPPacket lengthPacket;
   lengthPacket.unpack(buffer);
 
   targetBytes = lengthPacket.getLength() - targetBytes;
@@ -39,11 +39,11 @@ void PTPIP::open() {
   InitCommandRequest initCmdReq(clientGuid, clientName);
   commandSocket->sendPacket(initCmdReq);
   commandSocket->recvPacket(response, 60000);
-  auto initCmdAck = IpPacket::unpackAs<InitCommandAck>(response);
+  auto initCmdAck = IPPacket::unpackAs<InitCommandAck>(response);
 
   if (!initCmdAck) {
     // TODO: Move to helper function to avoid duplication?
-    if (auto initFail = IpPacket::unpackAs<InitFail>(response))
+    if (auto initFail = IPPacket::unpackAs<InitFail>(response))
       throw PTPTransportException("Init Fail (reason code 0x%04x)",
                                   initFail->reason);
     throw PTPTransportException(
@@ -59,11 +59,11 @@ void PTPIP::open() {
   InitEventRequest initEvtReq(initCmdAck->connectionNum);
   eventSocket->sendPacket(initEvtReq);
   eventSocket->recvPacket(response);
-  auto initEvtAck = IpPacket::unpackAs<InitEventAck>(response);
+  auto initEvtAck = IPPacket::unpackAs<InitEventAck>(response);
 
   if (!initEvtAck) {
     // TODO: Move to helper function to avoid duplication?
-    if (auto initFail = IpPacket::unpackAs<InitFail>(response))
+    if (auto initFail = IPPacket::unpackAs<InitFail>(response))
       throw PTPTransportException("Init Fail (reason code 0x%04x)",
                                   initFail->reason);
     throw PTPTransportException(
@@ -105,7 +105,7 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
     commandSocket->recvPacket(response);
 
     // TODO: Validate transactionId?
-    if (auto opRes = IpPacket::unpackAs<OperationResponse>(response)) {
+    if (auto opRes = IPPacket::unpackAs<OperationResponse>(response)) {
       Logger::log("> Operation Response (responseCode=0x%04x)",
                   opRes->responseCode);
       // TODO: Replace with warnings?
@@ -116,14 +116,14 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
         throw PTPTransportException(
             "Wrong amount of data in transaction data phase.");
       return OperationResponseData(opRes->responseCode, opRes->params, payload);
-    } else if (auto startData = IpPacket::unpackAs<StartData>(response)) {
+    } else if (auto startData = IPPacket::unpackAs<StartData>(response)) {
       Logger::log("> Start Data (totalDataLength=%d)",
                   startData->totalDataLength);
       totalDataLength = startData->totalDataLength;
-    } else if (auto data = IpPacket::unpackAs<Data>(response)) {
+    } else if (auto data = IPPacket::unpackAs<Data>(response)) {
       Logger::log("> Data (payload.size()=%d)", data->payload.size());
       payload.insert(payload.end(), data->payload.begin(), data->payload.end());
-    } else if (auto endData = IpPacket::unpackAs<EndData>(response)) {
+    } else if (auto endData = IPPacket::unpackAs<EndData>(response)) {
       Logger::log("> End Data (payload.size()=%d)", endData->payload.size());
       payload.insert(payload.end(), endData->payload.begin(),
                      endData->payload.end());

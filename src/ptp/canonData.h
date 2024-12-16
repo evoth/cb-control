@@ -13,7 +13,7 @@ class CanonDeviceProp : public Packet {
 
   CanonDeviceProp(uint32_t devicePropertyCode = 0, T value = 0)
       : devicePropertyCode(devicePropertyCode), value(value) {
-    lengthField(length);
+    lengthField(this->length);
     typeField(this->devicePropertyCode);
     field(this->value);
   }

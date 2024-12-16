@@ -87,7 +87,8 @@
       "set": "cpp",
       "numbers": "cpp",
       "semaphore": "cpp",
-      "span": "cpp"
+      "span": "cpp",
+      "typeindex": "cpp"
     },
     "[cpp]": {
       "editor.defaultFormatter": "ms-vscode.cpptools",

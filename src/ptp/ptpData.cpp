@@ -17,7 +17,8 @@ void PTPString::unpack(Buffer& buffer,
   if (offset >= limit || buffer[offset] == 0x00) {
     numChars = 0;
     string.clear();
-    offset++;
+    if (offset < limit)
+      offset++;
     return;
   }
   Packet::unpack(buffer, offset, limitOffset);
@@ -27,7 +28,27 @@ bool DeviceInfo::isOpSupported(uint16_t operationCode,
                                uint32_t vendorExtensionId) {
   if (vendorExtensionId != 0 && vendorExtensionId != this->vendorExtensionId)
     return false;
-  return std::find(operationsSupported.array.begin(),
-                   operationsSupported.array.end(),
-                   operationCode) != operationsSupported.array.end();
+  return std::find(operationsSupported.begin(), operationsSupported.end(),
+                   operationCode) != operationsSupported.end();
 }
+
+// 128-bit data types not currently supported
+const std::unordered_map<std::type_index, uint16_t> DataTypeMap = {
+    {typeid(int8_t), DataType::INT8},
+    {typeid(uint8_t), DataType::UINT8},
+    {typeid(int16_t), DataType::INT16},
+    {typeid(uint16_t), DataType::UINT16},
+    {typeid(int32_t), DataType::INT32},
+    {typeid(uint32_t), DataType::UINT32},
+    {typeid(int64_t), DataType::INT64},
+    {typeid(uint64_t), DataType::UINT64},
+    {typeid(std::vector<int8_t>), DataType::AINT8},
+    {typeid(std::vector<uint8_t>), DataType::AUINT8},
+    {typeid(std::vector<int16_t>), DataType::AINT16},
+    {typeid(std::vector<uint16_t>), DataType::AUINT16},
+    {typeid(std::vector<int32_t>), DataType::AINT32},
+    {typeid(std::vector<uint32_t>), DataType::AUINT32},
+    {typeid(std::vector<int64_t>), DataType::AINT64},
+    {typeid(std::vector<uint64_t>), DataType::AUINT64},
+    {typeid(std::string), DataType::STR},
+};
