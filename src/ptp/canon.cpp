@@ -56,6 +56,16 @@ DeviceInfo CanonPTPCamera::getDeviceInfo() {
   deviceInfo.vendorExtensionId =
       static_cast<uint32_t>(VendorExtensionId::Canon);
 
+  if (deviceInfo.isOpSupported(CanonOperationCode::EOSGetDeviceInfoEx)) {
+    Buffer data = recv(CanonOperationCode::EOSGetDeviceInfoEx).data;
+    CanonEOSDeviceInfo eosDeviceInfo;
+    eosDeviceInfo.unpack(data);
+    deviceInfo.devicePropertiesSupported.insert(
+        deviceInfo.devicePropertiesSupported.end(),
+        eosDeviceInfo.devicePropertiesSupported.begin(),
+        eosDeviceInfo.devicePropertiesSupported.end());
+  }
+
   return deviceInfo;
 }
 

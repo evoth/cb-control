@@ -4,8 +4,26 @@
 #include "../packet.h"
 #include "ptp.h"
 
+// TODO: Do some digging in Wireshark to better understand this
+class CanonEOSDeviceInfo : public PTPPacket {
+ public:
+  std::vector<uint32_t> eventsSupported;
+  std::vector<uint32_t> devicePropertiesSupported;
+
+  CanonEOSDeviceInfo() {
+    field(this->unknown1);
+    field(this->eventsSupported);
+    field(this->devicePropertiesSupported);
+    field(this->unknown2);
+  }
+
+ private:
+  uint32_t unknown1;
+  std::vector<uint32_t> unknown2;
+};
+
 template <std::unsigned_integral T>
-class CanonDeviceProp : public Packet {
+class CanonDeviceProp : public PTPPacket {
  public:
   uint32_t length = 0;
   uint32_t devicePropertyCode = 0;
