@@ -4,22 +4,22 @@
 #include "../packet.h"
 #include "ptp.h"
 
-// TODO: Do some digging in Wireshark to better understand this
 class CanonEOSDeviceInfo : public PTPPacket {
  public:
+  uint32_t length;
   std::vector<uint32_t> eventsSupported;
   std::vector<uint32_t> devicePropertiesSupported;
 
   CanonEOSDeviceInfo() {
-    field(this->unknown1);
+    lengthField(this->length);
     field(this->eventsSupported);
     field(this->devicePropertiesSupported);
-    field(this->unknown2);
+    field(this->unknown);
   }
 
  private:
-  uint32_t unknown1;
-  std::vector<uint32_t> unknown2;
+  // On my camera I got {0x00, 0x01, 0x02, 0x04, 0x08}
+  std::vector<uint32_t> unknown;
 };
 
 template <std::unsigned_integral T>

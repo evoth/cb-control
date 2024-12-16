@@ -1,6 +1,7 @@
 #include "factory.h"
 #include "logger.h"
 #include "ptp/canon.h"
+#include "ptp/nikon.h"
 
 #if defined(_WIN32)
 #include "windows/socket.h"
@@ -16,11 +17,14 @@ std::unique_ptr<Camera> PTPFactory::create() {
   ptp.openTransport();
   DeviceInfo deviceInfo = ptp.getDeviceInfo();
 
-  // Canon doesn't seem to use their designated VendorExtensionID, so we check
-  // the manufacturer string instead
+  // Canon and Nikon use the MTP VendorExtensionID instead of their designated
+  // ones, so we check the manufacturer string instead
   if (deviceInfo.manufacturer.find("Canon") != std::string::npos) {
     Logger::log("Detected Canon camera.");
     return std::make_unique<CanonPTPCamera>(std::move(ptp));
+  } else if (deviceInfo.manufacturer.find("Nikon") != std::string::npos) {
+    Logger::log("Detected Nikon camera.");
+    return std::make_unique<NikonPTPCamera>(std::move(ptp));
   }
 
   return nullptr;
