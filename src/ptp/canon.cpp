@@ -27,7 +27,7 @@ void CanonPTPCamera::openSession() {
   // TODO: Include specific exceptions?
   if (isEosM()) {
     mesg(CanonOperationCode::EOSSetEventMode, {0x02});
-    // setEosDeviceProp(CanonEOSPropertyCode::EVFOutputDevice, 0x08);
+    // eosSetDeviceProp(CanonEOSPropertyCode::EVFOutputDevice, 0x08);
   }
 
   invalidateCachedDI();
@@ -40,7 +40,7 @@ void CanonPTPCamera::closeSession() {
   }
 
   // if (isEosM())
-  //   setEosDeviceProp(CanonEOSPropertyCode::EVFOutputDevice, 0x00);
+  //   eosSetDeviceProp(CanonEOSPropertyCode::EVFOutputDevice, 0x00);
 
   // Get events?
 

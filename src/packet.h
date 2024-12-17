@@ -269,6 +269,9 @@ class Packet : public IField {
   uint32_t getLength() { return _length.get(); }
   uint32_t getType() { return _type.get(); }
 
+ protected:
+  std::vector<std::unique_ptr<IField>> fields;
+
 #define COMMA() ,
 #define ADD_FIELD(T_FIELD, T_PACKER, PACKER_ARG, VALUE) \
   fields.push_back(std::make_unique<Field<T_FIELD>>(    \
@@ -342,9 +345,6 @@ class Packet : public IField {
 
 #undef ADD_FIELD
 #undef COMMA
-
- protected:
-  std::vector<std::unique_ptr<IField>> fields;
 
  private:
   SpecialProp _length;
