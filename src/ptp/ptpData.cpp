@@ -32,6 +32,16 @@ bool DeviceInfo::isOpSupported(uint16_t operationCode,
                    operationCode) != operationsSupported.end();
 }
 
+// TODO: Reduce duplication?
+bool DeviceInfo::isPropSupported(uint16_t propertyCode,
+                                 uint32_t vendorExtensionId) {
+  if (vendorExtensionId != 0 && vendorExtensionId != this->vendorExtensionId)
+    return false;
+  return std::find(devicePropertiesSupported.begin(),
+                   devicePropertiesSupported.end(),
+                   propertyCode) != devicePropertiesSupported.end();
+}
+
 // 128-bit data types not currently supported
 const std::unordered_map<std::type_index, uint16_t> DataTypeMap = {
     {typeid(int8_t), DataType::INT8},

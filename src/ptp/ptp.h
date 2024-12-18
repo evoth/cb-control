@@ -120,6 +120,11 @@ class PTPCamera : protected PTP, public Camera {
         operationCode, static_cast<uint32_t>(vendorExtensionId));
   }
 
+  bool isPropSupported(uint16_t propertyCode) {
+    return getCachedDI()->isPropSupported(
+        propertyCode, static_cast<uint32_t>(vendorExtensionId));
+  }
+
  private:
   std::shared_ptr<DeviceInfo> cachedDI;
 };

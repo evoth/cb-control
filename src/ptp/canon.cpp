@@ -102,12 +102,65 @@ void CanonPTPCamera::checkEvents() {
     if (auto propChanged = EOSEventPacket::unpackAs<EOSPropChanged>(event)) {
       Logger::log(">> Prop change (propCode=0x%04x, propValue=0x%04x)",
                   propChanged->propertyCode, propChanged->propertyValue);
-      if (propChanged->propertyCode == EOSPropertyCode::Aperture) {
-        if (auto val =
-                CanonApertureValues.findValue(propChanged->propertyValue))
-          Logger::log(">> Aperture change (value=%0.1f)",
-                      (float)val->first / val->second);
-      }
+      updateProp(propChanged->propertyCode, propChanged->propertyValue);
     }
   }
+}
+
+// TODO: Figure out how to tell when stuff changes
+void CanonPTPCamera::updateDesc(uint32_t propertyCode,
+                                CameraPropDesc& desc,
+                                CameraPropMap<uint32_t> map) {
+  desc.isUpdated = false;
+
+  if (!isPropSupported(propertyCode)) {
+    desc.isEnabled = false;
+    return;
+  }
+
+  desc.isEnabled = true;
+
+  auto dpd = getDevicePropDesc<uint32_t>(propertyCode);
+  auto enumForm =
+      Packet::unpackAs<PropDescForm, PropDescEnum<uint32_t>>(dpd->form);
+  if (!enumForm)
+    return;
+
+  if (auto currentValue = map.findValue(dpd->currentValue)) {
+    desc.currentValue = currentValue.value();
+  }
+
+  desc.supportedValues.clear();
+  for (uint32_t& key : enumForm->supportedValues) {
+    auto valueFound = map.findValue(key);
+    if (valueFound) {
+      desc.supportedValues.push_back(valueFound.value());
+      Logger::log(">> Allowed value: %0.1f",
+                  (float)valueFound.value().first / valueFound.value().second);
+    }
+  }
+
+  desc.isUpdated = true;
+}
+
+void CanonPTPCamera::updateProp(uint32_t propertyCode, uint32_t value) {
+  switch (propertyCode) {
+    case EOSPropertyCode::Aperture:
+      updateProp(propertyCode, value, props.aperture, CanonApertureValues);
+      break;
+    default:
+      break;
+  }
+}
+
+// TODO: Obtain a lock to modify this
+void CanonPTPCamera::updateProp(uint32_t propertyCode,
+                                uint32_t value,
+                                CameraPropDesc& desc,
+                                CameraPropMap<uint32_t> map) {
+  if (auto valueFound = map.findValue(value))
+    desc.currentValue = valueFound.value();
+
+  if (!desc.isEnabled || !desc.isUpdated)
+    updateDesc(propertyCode, desc, map);
 }

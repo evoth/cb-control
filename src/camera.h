@@ -72,29 +72,19 @@ enum class CameraMode {
   Auto,
 };
 
-class CameraPropDesc {
- public:
+struct CameraPropDesc {
   CameraPropValue currentValue;
   std::vector<CameraPropValue> supportedValues;
   bool isEnabled = false;
   bool isUpdated = false;
-
-  CameraPropDesc(CameraPropValue currentValue,
-                 std::vector<CameraPropValue> supportedValues,
-                 bool isEnabled,
-                 bool isUpdated)
-      : currentValue(currentValue),
-        supportedValues(supportedValues),
-        isEnabled(isEnabled),
-        isUpdated(isUpdated) {}
 };
 
 struct CameraProps {
   CameraMode mode = CameraMode::Unknown;
-  std::unique_ptr<CameraPropDesc> aperture;
-  std::unique_ptr<CameraPropDesc> shutterSpeed;
-  std::unique_ptr<CameraPropDesc> iso;
-  std::unique_ptr<CameraPropDesc> evComp;
+  CameraPropDesc aperture;
+  CameraPropDesc shutterSpeed;
+  CameraPropDesc iso;
+  CameraPropDesc evComp;
 };
 
 class Camera {

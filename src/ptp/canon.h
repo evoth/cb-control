@@ -28,6 +28,14 @@ class CanonPTPCamera : public PTPCamera {
   bool isEosM();
 
   void checkEvents();
+  void updateDesc(uint32_t propertyCode,
+                  CameraPropDesc& desc,
+                  CameraPropMap<uint32_t> map);
+  void updateProp(uint32_t propertyCode, uint32_t value);
+  void updateProp(uint32_t propertyCode,
+                  uint32_t value,
+                  CameraPropDesc& desc,
+                  CameraPropMap<uint32_t> map);
 
   template <std::unsigned_integral T>
   void eosSetDeviceProp(uint32_t devicePropertyCode, T value) {

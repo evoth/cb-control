@@ -165,6 +165,7 @@ class DeviceInfo : public PTPPacket {
   }
 
   bool isOpSupported(uint16_t operationCode, uint32_t vendorExtensionId = 0);
+  bool isPropSupported(uint16_t propertyCode, uint32_t vendorExtensionId = 0);
 };
 
 extern const std::unordered_map<std::type_index, uint16_t> DataTypeMap;
