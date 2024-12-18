@@ -18,7 +18,7 @@ void CanonPTPCamera::openSession() {
     while (true) {
       if (stoken.stop_requested())
         return;
-      recv(CanonOperationCode::EOSGetEvent);
+      checkEvents();
       std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
   });
@@ -27,7 +27,7 @@ void CanonPTPCamera::openSession() {
   // TODO: Include specific exceptions?
   if (isEosM()) {
     mesg(CanonOperationCode::EOSSetEventMode, {0x02});
-    // eosSetDeviceProp(CanonEOSPropertyCode::EVFOutputDevice, 0x08);
+    // eosSetDeviceProp(EOSPropertyCode::EVFOutputDevice, 0x08);
   }
 
   invalidateCachedDI();
@@ -40,7 +40,7 @@ void CanonPTPCamera::closeSession() {
   }
 
   // if (isEosM())
-  //   eosSetDeviceProp(CanonEOSPropertyCode::EVFOutputDevice, 0x00);
+  //   eosSetDeviceProp(EOSPropertyCode::EVFOutputDevice, 0x00);
 
   // Get events?
 
@@ -58,7 +58,7 @@ DeviceInfo CanonPTPCamera::getDeviceInfo() {
 
   if (deviceInfo.isOpSupported(CanonOperationCode::EOSGetDeviceInfoEx)) {
     Buffer data = recv(CanonOperationCode::EOSGetDeviceInfoEx).data;
-    CanonEOSDeviceInfo eosDeviceInfo;
+    EOSDeviceInfo eosDeviceInfo;
     eosDeviceInfo.unpack(data);
     deviceInfo.devicePropertiesSupported.insert(
         deviceInfo.devicePropertiesSupported.end(),
@@ -92,4 +92,22 @@ bool CanonPTPCamera::isEosM() {
   return getCachedDI()->model.find("Canon EOS M") != std::string::npos;
 
   // TODO: Include Powershot models with similar firmware?
+}
+
+void CanonPTPCamera::checkEvents() {
+  Buffer data = recv(CanonOperationCode::EOSGetEvent).data;
+  EOSEventData eventData;
+  eventData.unpack(data);
+  for (Buffer& event : eventData.events) {
+    if (auto propChanged = EOSEventPacket::unpackAs<EOSPropChanged>(event)) {
+      Logger::log(">> Prop change (propCode=0x%04x, propValue=0x%04x)",
+                  propChanged->propertyCode, propChanged->propertyValue);
+      if (propChanged->propertyCode == EOSPropertyCode::Aperture) {
+        if (auto val =
+                CanonApertureValues.findValue(propChanged->propertyValue))
+          Logger::log(">> Aperture change (value=%0.1f)",
+                      (float)val->first / val->second);
+      }
+    }
+  }
 }

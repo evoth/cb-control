@@ -28,10 +28,38 @@
 // TODO: Return types? Exception handling?
 
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
+// Values are stored as (numerator, denominator)
 typedef std::pair<uint32_t, uint32_t> CameraPropValue;
+
+template <std::integral T>
+class CameraPropMap {
+ public:
+  CameraPropMap(const std::vector<std::pair<T, CameraPropValue>>& map)
+      : map(map) {}
+
+  std::optional<T> findKey(CameraPropValue value) {
+    for (auto& [k, v] : map) {
+      if (v == value)
+        return k;
+    }
+    return std::nullopt;
+  }
+
+  std::optional<CameraPropValue> findValue(T key) {
+    for (auto& [k, v] : map) {
+      if (k == key)
+        return v;
+    }
+    return std::nullopt;
+  }
+
+ private:
+  std::vector<std::pair<T, CameraPropValue>> map;
+};
 
 const CameraPropValue CPV_BULB(1, 0);
 
