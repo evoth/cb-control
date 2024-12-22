@@ -17,7 +17,7 @@ void WideString::pack(std::string& value, Buffer& buffer, int& offset) {
 }
 
 void WideString::unpack(std::string& value,
-                        Buffer& buffer,
+                        const Buffer& buffer,
                         int& offset,
                         std::optional<int> limitOffset) {
   int limit = getUnpackLimit(buffer.size(), limitOffset);
@@ -36,7 +36,7 @@ void NestedPacket::pack(Packet& value, Buffer& buffer, int& offset) {
 }
 
 void NestedPacket::unpack(Packet& value,
-                          Buffer& buffer,
+                          const Buffer& buffer,
                           int& offset,
                           std::optional<int> limitOffset) {
   value.unpack(buffer, offset, limitOffset);
@@ -54,7 +54,7 @@ void Packet::pack(Buffer& buffer, int& offset) {
     field->pack(buffer, offset);
 };
 
-void Packet::unpack(Buffer& buffer,
+void Packet::unpack(const Buffer& buffer,
                     int& offset,
                     std::optional<int> limitOffset) {
   int startOffset = offset;
@@ -73,7 +73,7 @@ Buffer Packet::pack() {
   return buffer;
 };
 
-void Packet::unpack(Buffer& buffer) {
+void Packet::unpack(const Buffer& buffer) {
   int offset = 0;
   unpack(buffer, offset);
 };

@@ -50,18 +50,18 @@ void CanonPTPCamera::closeSession() {
   PTP::closeSession();
 }
 
-DeviceInfo CanonPTPCamera::getDeviceInfo() {
-  DeviceInfo deviceInfo = PTP::getDeviceInfo();
+std::unique_ptr<DeviceInfo> CanonPTPCamera::getDeviceInfo() {
+  std::unique_ptr<DeviceInfo> deviceInfo = PTP::getDeviceInfo();
 
-  deviceInfo.vendorExtensionId =
+  deviceInfo->vendorExtensionId =
       static_cast<uint32_t>(VendorExtensionId::Canon);
 
-  if (deviceInfo.isOpSupported(CanonOperationCode::EOSGetDeviceInfoEx)) {
+  if (deviceInfo->isOpSupported(CanonOperationCode::EOSGetDeviceInfoEx)) {
     Buffer data = recv(CanonOperationCode::EOSGetDeviceInfoEx).data;
     EOSDeviceInfo eosDeviceInfo;
     eosDeviceInfo.unpack(data);
-    deviceInfo.devicePropertiesSupported.insert(
-        deviceInfo.devicePropertiesSupported.end(),
+    deviceInfo->devicePropertiesSupported.insert(
+        deviceInfo->devicePropertiesSupported.end(),
         eosDeviceInfo.devicePropertiesSupported.begin(),
         eosDeviceInfo.devicePropertiesSupported.end());
   }

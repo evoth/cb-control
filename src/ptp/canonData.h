@@ -50,7 +50,7 @@ class EOSEventPacket : public Packet {
 
   template <typename T>
     requires(std::derived_from<T, Packet>)
-  static std::unique_ptr<T> unpackAs(Buffer& buffer) {
+  static std::unique_ptr<T> unpackAs(const Buffer& buffer) {
     return Packet::unpackAs<EOSEventPacket, T>(buffer);
   }
 };

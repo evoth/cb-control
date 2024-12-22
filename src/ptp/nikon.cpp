@@ -27,10 +27,10 @@ void NikonPTPCamera::closeSession() {
   PTP::closeSession();
 }
 
-DeviceInfo NikonPTPCamera::getDeviceInfo() {
-  DeviceInfo deviceInfo = PTP::getDeviceInfo();
+std::unique_ptr<DeviceInfo> NikonPTPCamera::getDeviceInfo() {
+  std::unique_ptr<DeviceInfo> deviceInfo = PTP::getDeviceInfo();
 
-  deviceInfo.vendorExtensionId =
+  deviceInfo->vendorExtensionId =
       static_cast<uint32_t>(VendorExtensionId::Nikon);
 
   return deviceInfo;

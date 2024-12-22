@@ -8,14 +8,6 @@
 #include <mutex>
 #include <utility>
 
-struct EventData {
-  const uint16_t eventCode;
-  const std::array<uint32_t, 3> params;
-
-  EventData(uint16_t eventCode, std::array<uint32_t, 3> params)
-      : eventCode(eventCode), params(params) {}
-};
-
 class PTPTransport {
  public:
   // Destructor should close
@@ -36,9 +28,9 @@ class PTP {
       : transport(std::move(transport)) {}
   PTP(PTP&& o) noexcept
       : transport(std::move(o.transport)),
+        isSessionOpen(std::exchange(o.isSessionOpen, false)),
         sessionId(std::exchange(o.sessionId, 0)),
-        transactionId(std::exchange(o.transactionId, 0)),
-        isSessionOpen(std::exchange(o.isSessionOpen, false)) {};
+        transactionId(std::exchange(o.transactionId, 0)) {};
 
   virtual ~PTP() {
     Logger::log("PTP destructed");
@@ -55,7 +47,8 @@ class PTP {
 
   virtual void openSession();
   virtual void closeSession();
-  virtual DeviceInfo getDeviceInfo();
+
+  virtual std::unique_ptr<DeviceInfo> getDeviceInfo();
 
   template <typename T>
   std::unique_ptr<DevicePropDesc<T>> getDevicePropDesc(
@@ -70,6 +63,7 @@ class PTP {
 
  protected:
   std::unique_ptr<PTPTransport> transport;
+  bool isSessionOpen = false;
 
   OperationResponseData send(uint16_t operationCode,
                              std::array<uint32_t, 5> params = {},
@@ -82,7 +76,6 @@ class PTP {
  private:
   uint32_t sessionId = 0;
   uint32_t transactionId = 0;
-  bool isSessionOpen = false;
   std::mutex transactionMutex;
 
   uint32_t getSessionId() { return isSessionOpen ? sessionId : 0; }
@@ -94,22 +87,21 @@ class PTPCamera : protected PTP, public Camera {
   PTPCamera(PTP&& ptp, VendorExtensionId vendorExtensionId)
       : PTP(std::move(ptp)), vendorExtensionId(vendorExtensionId) {}
 
-  void connect() override {
-    openTransport();
-    openSession();
-  }
+  void connect() override { openSession(); }
 
   void disconnect() override {
     closeSession();
     closeTransport();
   }
 
+  bool isConnected() override { return isSessionOpen && isTransportOpen(); }
+
  protected:
   const VendorExtensionId vendorExtensionId;
 
   std::shared_ptr<DeviceInfo> getCachedDI() {
     if (!cachedDI)
-      cachedDI = std::make_shared<DeviceInfo>(getDeviceInfo());
+      cachedDI = getDeviceInfo();
     return cachedDI;
   }
 

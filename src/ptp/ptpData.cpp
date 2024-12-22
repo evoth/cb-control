@@ -9,7 +9,7 @@ void PTPString::pack(Buffer& buffer, int& offset) {
   Packet::pack(buffer, offset);
 };
 
-void PTPString::unpack(Buffer& buffer,
+void PTPString::unpack(const Buffer& buffer,
                        int& offset,
                        std::optional<int> limitOffset) {
   int limit = getUnpackLimit(buffer.size(), limitOffset);
@@ -25,7 +25,7 @@ void PTPString::unpack(Buffer& buffer,
 };
 
 bool DeviceInfo::isOpSupported(uint16_t operationCode,
-                               uint32_t vendorExtensionId) {
+                               uint32_t vendorExtensionId) const {
   if (vendorExtensionId != 0 && vendorExtensionId != this->vendorExtensionId)
     return false;
   return std::find(operationsSupported.begin(), operationsSupported.end(),
@@ -34,7 +34,7 @@ bool DeviceInfo::isOpSupported(uint16_t operationCode,
 
 // TODO: Reduce duplication?
 bool DeviceInfo::isPropSupported(uint16_t propertyCode,
-                                 uint32_t vendorExtensionId) {
+                                 uint32_t vendorExtensionId) const {
   if (vendorExtensionId != 0 && vendorExtensionId != this->vendorExtensionId)
     return false;
   return std::find(devicePropertiesSupported.begin(),

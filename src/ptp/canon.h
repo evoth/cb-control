@@ -20,7 +20,7 @@ class CanonPTPCamera : public PTPCamera {
  protected:
   void openSession() override;
   void closeSession() override;
-  DeviceInfo getDeviceInfo() override;
+  std::unique_ptr<DeviceInfo> getDeviceInfo() override;
 
  private:
   std::jthread eosEventThread;

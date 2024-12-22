@@ -42,7 +42,7 @@ class PairMap {
  public:
   PairMap(const std::vector<std::pair<T, U>>& map) : map(map) {}
 
-  std::optional<T> findKey(U value) {
+  std::optional<T> findKey(const U& value) const {
     for (auto& [k, v] : map) {
       if (v == value)
         return k;
@@ -50,7 +50,7 @@ class PairMap {
     return std::nullopt;
   }
 
-  std::optional<U> findValue(T key) {
+  std::optional<U> findValue(const T& key) const {
     for (auto& [k, v] : map) {
       if (k == key)
         return v;
@@ -59,7 +59,7 @@ class PairMap {
   }
 
  private:
-  std::vector<std::pair<T, U>> map;
+  const std::vector<std::pair<T, U>> map;
 };
 
 enum class CameraProp {
@@ -93,6 +93,7 @@ class Camera {
 
   virtual void connect() = 0;
   virtual void disconnect() = 0;
+  virtual bool isConnected() = 0;
 
   virtual void triggerCapture() = 0;
   virtual void setProp(CameraProp prop, CameraPropValue value) = 0;

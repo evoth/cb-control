@@ -16,62 +16,70 @@ class Packet;
 // TODO: Move this somewhere else?
 int getUnpackLimit(int hardLimit, std::optional<int> limitOffset);
 
+template <std::unsigned_integral T>
 class ISpecialPropRef {
  public:
-  virtual uint32_t get() = 0;
-  virtual void set(uint32_t newValue) = 0;
+  virtual ~ISpecialPropRef() = default;
+
+  virtual T get() const = 0;
+  virtual void set(T newValue) = 0;
+};
+
+template <std::unsigned_integral T, std::unsigned_integral U>
+class SpecialPropRef : public ISpecialPropRef<T> {
+ public:
+  SpecialPropRef(U& value) : value(value) {}
+
+  T get() const override { return static_cast<T>(value); }
+
+  void set(T newValue) override { value = static_cast<U>(newValue); }
+
+ private:
+  U& value;
 };
 
 template <std::unsigned_integral T>
-class SpecialPropRef : public ISpecialPropRef {
- public:
-  SpecialPropRef(T& value) : value(value) {}
-
-  uint32_t get() override { return static_cast<uint32_t>(value); }
-
-  void set(uint32_t newValue) override { value = static_cast<T>(newValue); }
-
- private:
-  T& value;
-};
-
 class SpecialProp {
  public:
-  uint32_t get() {
+  T get() const {
     if (prop)
       return prop->get();
     return 0;
   }
 
-  void set(uint32_t value) {
+  void set(T value) {
     if (prop)
       prop->set(value);
   }
 
-  template <std::unsigned_integral T>
-  void bind(T& ref) {
-    prop = std::make_unique<SpecialPropRef<T>>(ref);
+  template <std::unsigned_integral U>
+  void bind(U& ref) {
+    prop = std::make_unique<SpecialPropRef<T, U>>(ref);
   }
 
  private:
-  std::unique_ptr<ISpecialPropRef> prop;
+  std::unique_ptr<ISpecialPropRef<T>> prop;
 };
 
 template <typename T>
 class Packer {
  public:
+  virtual ~Packer() = default;
+
   virtual void pack(T& value, Buffer& buffer, int& offset) = 0;
   virtual void unpack(T& value,
-                      Buffer& buffer,
+                      const Buffer& buffer,
                       int& offset,
                       std::optional<int> limitOffset) = 0;
 };
 
 class IField {
  public:
+  virtual ~IField() = default;
+
   virtual void pack(Buffer& buffer, int& offset) = 0;
 
-  virtual void unpack(Buffer& buffer,
+  virtual void unpack(const Buffer& buffer,
                       int& offset,
                       std::optional<int> limitOffset) = 0;
 };
@@ -86,7 +94,7 @@ class Field : public IField {
     packer->pack(value, buffer, offset);
   }
 
-  void unpack(Buffer& buffer,
+  void unpack(const Buffer& buffer,
               int& offset,
               std::optional<int> limitOffset) override {
     packer->unpack(value, buffer, offset, limitOffset);
@@ -112,7 +120,7 @@ class Primitive : public Packer<T> {
   }
 
   void unpack(T& value,
-              Buffer& buffer,
+              const Buffer& buffer,
               int& offset,
               std::optional<int> limitOffset) override {
     int limit = getUnpackLimit(buffer.size(), limitOffset);
@@ -145,7 +153,7 @@ class Vector : public Packer<std::vector<T>> {
   }
 
   void unpack(std::vector<T>& values,
-              Buffer& buffer,
+              const Buffer& buffer,
               int& offset,
               std::optional<int> limitOffset) override {
     int limit = getUnpackLimit(buffer.size(), limitOffset);
@@ -158,7 +166,7 @@ class Vector : public Packer<std::vector<T>> {
 
  private:
   std::unique_ptr<Packer<T>> packer;
-  SpecialProp _length;
+  SpecialProp<U> _length;
   const bool greedy;
 };
 
@@ -173,7 +181,7 @@ class Array : public Packer<std::array<T, N>> {
   }
 
   void unpack(std::array<T, N>& value,
-              Buffer& buffer,
+              const Buffer& buffer,
               int& offset,
               std::optional<int> limitOffset) override {
     for (int i = 0; i < N; i++)
@@ -188,7 +196,7 @@ class WideString : public Packer<std::string> {
  public:
   void pack(std::string& value, Buffer& buffer, int& offset) override;
   void unpack(std::string& value,
-              Buffer& buffer,
+              const Buffer& buffer,
               int& offset,
               std::optional<int> limitOffset) override;
 
@@ -201,7 +209,7 @@ class NestedPacket : public Packer<Packet> {
  public:
   void pack(Packet& value, Buffer& buffer, int& offset) override;
   void unpack(Packet& value,
-              Buffer& buffer,
+              const Buffer& buffer,
               int& offset,
               std::optional<int> limitOffset) override;
 };
@@ -217,7 +225,7 @@ class PacketBuffer : public Packer<Buffer> {
   }
 
   void unpack(Buffer& value,
-              Buffer& buffer,
+              const Buffer& buffer,
               int& offset,
               std::optional<int> limitOffset) override {
     int startOffset = offset;
@@ -237,13 +245,15 @@ class PacketBuffer : public Packer<Buffer> {
 // TODO: The overloading on field is kind of fun but hurts readability
 class Packet : public IField {
  public:
+  virtual ~Packet() = default;
+
   virtual void pack(Buffer& buffer, int& offset) override;
-  virtual void unpack(Buffer& buffer,
+  virtual void unpack(const Buffer& buffer,
                       int& offset,
                       std::optional<int> limitOffset = std::nullopt) override;
 
   Buffer pack();
-  void unpack(Buffer& buffer);
+  void unpack(const Buffer& buffer);
 
   template <typename T>
     requires(std::derived_from<T, Packet>)
@@ -256,7 +266,7 @@ class Packet : public IField {
 
   template <typename T, typename U>
     requires(std::derived_from<T, Packet> && std::derived_from<U, Packet>)
-  static std::unique_ptr<U> unpackAs(Buffer& buffer) {
+  static std::unique_ptr<U> unpackAs(const Buffer& buffer) {
     T testPacket;
     testPacket.unpack(buffer);
     if (std::unique_ptr<U> packet = testPacket.template is<U>()) {
@@ -347,8 +357,8 @@ class Packet : public IField {
 #undef COMMA
 
  private:
-  SpecialProp _length;
-  SpecialProp _type;
+  SpecialProp<uint32_t> _length;
+  SpecialProp<uint32_t> _type;
 };
 
 #endif

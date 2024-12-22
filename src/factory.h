@@ -8,22 +8,14 @@ class CameraFactory {
  public:
   virtual ~CameraFactory() = default;
 
-  virtual bool isSupported() = 0;
-  virtual std::unique_ptr<Camera> create() = 0;
+  virtual bool isSupported() const = 0;
+  virtual std::unique_ptr<Camera> create() const = 0;
 };
 
-// Create can only be called once on this factory because the transport is
-// passed off to the camera
-class PTPFactory : public CameraFactory {
+class PTPFactory {
  public:
-  PTPFactory(std::unique_ptr<PTPTransport> transport)
-      : transport(std::move(transport)) {}
-
-  bool isSupported() override { return true; }
-  std::unique_ptr<Camera> create() override;
-
- private:
-  std::unique_ptr<PTPTransport> transport;
+  static std::unique_ptr<Camera> create(
+      std::unique_ptr<PTPTransport> transport);
 };
 
 class PTPIPFactory : public CameraFactory {
@@ -34,8 +26,8 @@ class PTPIPFactory : public CameraFactory {
                int port = 15740)
       : clientGuid(clientGuid), clientName(clientName), ip(ip), port(port) {}
 
-  bool isSupported() override;
-  std::unique_ptr<Camera> create() override;
+  bool isSupported() const override;
+  std::unique_ptr<Camera> create() const override;
 
  private:
   const std::array<uint8_t, 16> clientGuid;

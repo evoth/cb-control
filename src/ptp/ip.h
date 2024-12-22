@@ -18,7 +18,7 @@ class Socket {
   void recvPacket(Buffer& buffer, unsigned int timeoutMs = 10000);
 
  protected:
-  virtual int send(Buffer& buffer) = 0;  // Should not throw exceptions
+  virtual int send(const Buffer& buffer) = 0;  // Should not throw exceptions
   // Attempts to append `length` bytes to the buffer, waiting until enough bytes
   // have accumulated or until `timeoutMs` milliseconds have passed
   virtual int recv(Buffer& buffer,

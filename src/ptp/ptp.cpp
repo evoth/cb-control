@@ -37,10 +37,10 @@ void PTP::closeSession() {
   isSessionOpen = false;
 }
 
-DeviceInfo PTP::getDeviceInfo() {
+std::unique_ptr<DeviceInfo> PTP::getDeviceInfo() {
   Buffer data = recv(OperationCode::GetDeviceInfo).data;
-  DeviceInfo deviceInfo;
-  deviceInfo.unpack(data);
+  std::unique_ptr<DeviceInfo> deviceInfo = std::make_unique<DeviceInfo>();
+  deviceInfo->unpack(data);
   return deviceInfo;
 }
 

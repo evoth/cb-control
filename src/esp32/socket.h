@@ -9,7 +9,7 @@
 // TODO: Figure out error logging
 class ESP32Socket : public Socket {
  public:
-  virtual ~ESP32Socket() { client.stop(); }
+  ~ESP32Socket() { client.stop(); }
 
   bool connect(const std::string& ip, int port) override {
     return client.connect(ip.c_str(), port);
@@ -23,7 +23,7 @@ class ESP32Socket : public Socket {
   bool isConnected() override { return client.connected(); }
 
   // TODO: Use a buffer (ESP32 WiFi.h supports that, unlike pure Arduino)
-  int send(Buffer& buffer) override {
+  int send(const Buffer& buffer) override {
     int totalSent = 0;
     while (totalSent < buffer.size() && client.write(buffer[totalSent])) {
       totalSent++;

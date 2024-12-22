@@ -11,17 +11,17 @@ void Socket::sendPacket(Packet& packet) {
 
 // TODO: Better timeout handling
 void Socket::recvPacket(Buffer& buffer, unsigned int timeoutMs) {
+  IPPacket lengthPacket;
   buffer.clear();
 
-  int targetBytes = sizeof(uint32_t);
+  int targetBytes = sizeof(lengthPacket.length);
   if (recv(buffer, targetBytes, timeoutMs) < targetBytes)
     throw PTPTransportException(
         "Socket timed out while receiving length of next packet.");
 
-  IPPacket lengthPacket;
   lengthPacket.unpack(buffer);
 
-  targetBytes = lengthPacket.getLength() - targetBytes;
+  targetBytes = lengthPacket.length - targetBytes;
   if (recv(buffer, targetBytes, timeoutMs) < targetBytes)
     throw PTPTransportException(
         "Socket timed out while receiving packet body.");

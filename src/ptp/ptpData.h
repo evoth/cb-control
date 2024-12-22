@@ -18,6 +18,8 @@ class PTPException : public std::exception {
     snprintf(msg, sizeof(msg), format, args...);
   }
 
+  virtual ~PTPException() = default;
+
   virtual const char* what() const noexcept override { return msg; }
 
  private:
@@ -76,7 +78,6 @@ struct OperationResponseData {
   const uint16_t responseCode;
   const std::array<uint32_t, 5> params;
   const std::vector<unsigned char> data;
-  // const std::vector<std::unique_ptr<EventData>> events;
 
   OperationResponseData(uint16_t responseCode,
                         std::array<uint32_t, 5> params = {},
@@ -92,7 +93,7 @@ class PTPArray : public Packet {
 
   PTPArray(std::vector<T>& array) : array(array) {
     field(this->numElements);
-    field(this->array, numElements);
+    field(this->array, this->numElements);
   }
 };
 
@@ -107,7 +108,7 @@ class PTPString : public Packet {
   }
 
   void pack(Buffer& buffer, int& offset) override;
-  void unpack(Buffer& buffer,
+  void unpack(const Buffer& buffer,
               int& offset,
               std::optional<int> limitOffset) override;
 
@@ -164,8 +165,10 @@ class DeviceInfo : public PTPPacket {
     field(this->serialNumber);
   }
 
-  bool isOpSupported(uint16_t operationCode, uint32_t vendorExtensionId = 0);
-  bool isPropSupported(uint16_t propertyCode, uint32_t vendorExtensionId = 0);
+  bool isOpSupported(uint16_t operationCode,
+                     uint32_t vendorExtensionId = 0) const;
+  bool isPropSupported(uint16_t propertyCode,
+                       uint32_t vendorExtensionId = 0) const;
 };
 
 extern const std::map<std::type_index, uint16_t> DataTypeMap;
@@ -229,7 +232,7 @@ class PropDescEnum : public PropDescForm {
 
   PropDescEnum() : PropDescForm(0x02) {
     field(this->numValues);
-    field(this->supportedValues, numValues);
+    field(this->supportedValues, this->numValues);
   }
 };
 

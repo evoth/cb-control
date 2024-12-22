@@ -19,14 +19,14 @@ class WindowsSocket : public Socket {
       throw PTPTransportException("WSAStartup failed in socket constructor.");
   }
 
-  virtual ~WindowsSocket() {
+  ~WindowsSocket() {
     Logger::log("Socket destructed");
     closesocket(clientSocket);
     WSACleanup();
   }
 
   bool connect(const std::string& ip, int port) override {
-    close();
+    closesocket(clientSocket);  // TODO: is this needed?
 
     clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (clientSocket == INVALID_SOCKET)
@@ -70,7 +70,7 @@ class WindowsSocket : public Socket {
 
   bool isConnected() override { return clientSocket != INVALID_SOCKET; }
 
-  int send(Buffer& buffer) override {
+  int send(const Buffer& buffer) override {
     // Send in blocks of SOCKET_BUFF_SIZE bytes
     int totalSent = 0;
     while (totalSent < buffer.size()) {
