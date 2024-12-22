@@ -168,7 +168,7 @@ class DeviceInfo : public PTPPacket {
   bool isPropSupported(uint16_t propertyCode, uint32_t vendorExtensionId = 0);
 };
 
-extern const std::unordered_map<std::type_index, uint16_t> DataTypeMap;
+extern const std::map<std::type_index, uint16_t> DataTypeMap;
 
 template <typename T>
 class DevicePropDesc : public PTPPacket {

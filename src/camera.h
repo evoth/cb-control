@@ -27,21 +27,22 @@
 
 // TODO: Return types? Exception handling?
 
+#include <map>
 #include <memory>
 #include <optional>
-#include <utility>
 #include <vector>
 
 // Values are stored as (numerator, denominator)
 typedef std::pair<uint32_t, uint32_t> CameraPropValue;
 
-template <std::integral T>
-class CameraPropMap {
- public:
-  CameraPropMap(const std::vector<std::pair<T, CameraPropValue>>& map)
-      : map(map) {}
+const CameraPropValue CPV_BULB(1, 0);
 
-  std::optional<T> findKey(CameraPropValue value) {
+template <typename T, typename U>
+class PairMap {
+ public:
+  PairMap(const std::vector<std::pair<T, U>>& map) : map(map) {}
+
+  std::optional<T> findKey(U value) {
     for (auto& [k, v] : map) {
       if (v == value)
         return k;
@@ -49,7 +50,7 @@ class CameraPropMap {
     return std::nullopt;
   }
 
-  std::optional<CameraPropValue> findValue(T key) {
+  std::optional<U> findValue(T key) {
     for (auto& [k, v] : map) {
       if (k == key)
         return v;
@@ -58,10 +59,24 @@ class CameraPropMap {
   }
 
  private:
-  std::vector<std::pair<T, CameraPropValue>> map;
+  std::vector<std::pair<T, U>> map;
 };
 
-const CameraPropValue CPV_BULB(1, 0);
+enum class CameraProp {
+  Aperture,
+  ShutterSpeed,
+  ISO,
+  EVComp,
+};
+
+struct CameraPropDesc {
+  CameraPropValue currentValue;
+  std::vector<CameraPropValue> supportedValues;
+  bool isEnabled = false;
+  bool isUpdated = false;
+};
+
+typedef std::map<CameraProp, std::unique_ptr<CameraPropDesc>> CameraPropMap;
 
 enum class CameraMode {
   Unknown,
@@ -72,21 +87,6 @@ enum class CameraMode {
   Auto,
 };
 
-struct CameraPropDesc {
-  CameraPropValue currentValue;
-  std::vector<CameraPropValue> supportedValues;
-  bool isEnabled = false;
-  bool isUpdated = false;
-};
-
-struct CameraProps {
-  CameraMode mode = CameraMode::Unknown;
-  CameraPropDesc aperture;
-  CameraPropDesc shutterSpeed;
-  CameraPropDesc iso;
-  CameraPropDesc evComp;
-};
-
 class Camera {
  public:
   virtual ~Camera() = default;
@@ -95,9 +95,11 @@ class Camera {
   virtual void disconnect() = 0;
 
   virtual void triggerCapture() = 0;
+  virtual void setProp(CameraProp prop, CameraPropValue value) = 0;
 
  protected:
-  CameraProps props;
+  CameraPropMap props;
+  CameraMode mode = CameraMode::Unknown;
 };
 
 #endif

@@ -16,9 +16,15 @@ int main() {
   camera->connect();
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
+  camera->setProp(CameraProp::Aperture, CameraPropValue(56, 10));
+  camera->setProp(CameraProp::ShutterSpeed, CameraPropValue(1, 100));
+  camera->setProp(CameraProp::ISO, CameraPropValue(400, 1));
   camera->triggerCapture();
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
+  camera->setProp(CameraProp::Aperture, CameraPropValue(80, 10));
+  camera->setProp(CameraProp::ShutterSpeed, CameraPropValue(1, 1000));
+  camera->setProp(CameraProp::ISO, CameraPropValue(100, 1));
   camera->triggerCapture();
   std::this_thread::sleep_for(std::chrono::seconds(5));
 

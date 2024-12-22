@@ -43,7 +43,7 @@ bool DeviceInfo::isPropSupported(uint16_t propertyCode,
 }
 
 // 128-bit data types not currently supported
-const std::unordered_map<std::type_index, uint16_t> DataTypeMap = {
+const std::map<std::type_index, uint16_t> DataTypeMap = {
     {typeid(int8_t), DataType::INT8},
     {typeid(uint8_t), DataType::UINT8},
     {typeid(int16_t), DataType::INT16},
