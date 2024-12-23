@@ -9,12 +9,8 @@
 #include "esp32/socket.h"
 #endif
 
-std::unique_ptr<Camera> PTPFactory::create(
-    std::unique_ptr<PTPTransport> transport) {
-  if (!transport)
-    return nullptr;
-
-  PTP ptp(std::move(transport));
+std::unique_ptr<PTPCamera> PTPCameraFactory::create() const {
+  PTP ptp(transportFactory->create());
   ptp.openTransport();
   std::unique_ptr<DeviceInfo> deviceInfo = ptp.getDeviceInfo();
 
@@ -40,18 +36,16 @@ bool PTPIPFactory::isSupported() const {
 }
 
 // TODO: Find a less weird preprocessor "control" flow for this
-std::unique_ptr<Camera> PTPIPFactory::create() const {
+std::unique_ptr<PTPTransport> PTPIPFactory::create() const {
 #if defined(_WIN32)
-  std::unique_ptr<PTPIP> ptpip = std::make_unique<PTPIP>(
-      std::make_unique<WindowsSocket>(), std::make_unique<WindowsSocket>(),
-      clientGuid, clientName, ip);
+  return std::make_unique<PTPIP>(std::make_unique<WindowsSocket>(),
+                                 std::make_unique<WindowsSocket>(), clientGuid,
+                                 clientName, ip);
 #elif defined(ESP32)
-  std::unique_ptr<PTPIP> ptpip = std::make_unique<PTPIP>(
-      std::make_unique<ESP32Socket>(), std::make_unique<ESP32Socket>(),
-      clientGuid, clientName, ip);
+  return std::make_unique<PTPIP>(std::make_unique<ESP32Socket>(),
+                                 std::make_unique<ESP32Socket>(), clientGuid,
+                                 clientName, ip);
 #else
   return nullptr;
 #endif
-
-  return PTPFactory::create(std::move(ptpip));
 }

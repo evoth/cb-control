@@ -4,21 +4,28 @@
 #include "camera.h"
 #include "ptp/ip.h"
 
-class CameraFactory {
+template <typename T>
+class Factory {
  public:
-  virtual ~CameraFactory() = default;
+  virtual ~Factory() = default;
 
   virtual bool isSupported() const = 0;
-  virtual std::unique_ptr<Camera> create() const = 0;
+  virtual std::unique_ptr<T> create() const = 0;
 };
 
-class PTPFactory {
+class PTPCameraFactory : public Factory<PTPCamera> {
  public:
-  static std::unique_ptr<Camera> create(
-      std::unique_ptr<PTPTransport> transport);
+  PTPCameraFactory(std::unique_ptr<Factory<PTPTransport>> transportFactory)
+      : transportFactory(std::move(transportFactory)) {}
+
+  bool isSupported() const override { return true; }
+  std::unique_ptr<PTPCamera> create() const override;
+
+ private:
+  std::unique_ptr<Factory<PTPTransport>> transportFactory;
 };
 
-class PTPIPFactory : public CameraFactory {
+class PTPIPFactory : public Factory<PTPTransport> {
  public:
   PTPIPFactory(std::array<uint8_t, 16> clientGuid,
                std::string clientName,
@@ -27,7 +34,7 @@ class PTPIPFactory : public CameraFactory {
       : clientGuid(clientGuid), clientName(clientName), ip(ip), port(port) {}
 
   bool isSupported() const override;
-  std::unique_ptr<Camera> create() const override;
+  std::unique_ptr<PTPTransport> create() const override;
 
  private:
   const std::array<uint8_t, 16> clientGuid;

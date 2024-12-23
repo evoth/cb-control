@@ -7,7 +7,9 @@ int main() {
       {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7});
 
   std::unique_ptr<Camera> camera =
-      PTPIPFactory(guid, "Tim", "192.168.4.7").create();
+      PTPCameraFactory(
+          std::make_unique<PTPIPFactory>(guid, "Tim", "192.168.4.7"))
+          .create();
 
   if (!camera) {
     return 1;
