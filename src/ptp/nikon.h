@@ -17,10 +17,10 @@ class NikonPTPCamera : public PTPCamera {
  protected:
   void openSession() override;
   void closeSession() override;
-  std::unique_ptr<DeviceInfo> getDeviceInfo() override;
 
- private:
-  std::jthread nikonEventThread;
+  void checkEvents() override;
+
+  std::unique_ptr<DeviceInfo> getDeviceInfo() override;
 };
 
 #endif

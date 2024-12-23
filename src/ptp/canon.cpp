@@ -13,16 +13,6 @@ void CanonPTPCamera::openSession() {
   mesg(CanonOperationCode::EOSSetRemoteMode, {remoteMode});
   mesg(CanonOperationCode::EOSSetEventMode, {0x01});
 
-  // TODO: Proper event queue
-  eosEventThread = std::jthread([this](std::stop_token stoken) {
-    while (true) {
-      if (stoken.stop_requested())
-        return;
-      checkEvents();
-      std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
-  });
-
   // TODO: EVF and capture target logic?
   // TODO: Include specific exceptions?
   if (isEosM()) {
@@ -31,13 +21,12 @@ void CanonPTPCamera::openSession() {
   }
 
   invalidateCachedDI();
+
+  startEventThread();
 }
 
 void CanonPTPCamera::closeSession() {
-  if (eosEventThread.joinable()) {
-    eosEventThread.request_stop();
-    eosEventThread.join();
-  }
+  stopEventThread();
 
   // if (isEosM())
   //   eosSetDeviceProp(EOSPropertyCode::EVFOutputDevice, 0x00);

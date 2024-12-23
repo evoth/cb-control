@@ -4,8 +4,6 @@
 #include "canonData.h"
 #include "ptp.h"
 
-#include <thread>
-
 // TODO: Break out CanonPTPCamera into classes based on series/behavior (e.g.
 // EOS, EOS M, Powershot, etc.)
 
@@ -20,15 +18,14 @@ class CanonPTPCamera : public PTPCamera {
  protected:
   void openSession() override;
   void closeSession() override;
+
+  void checkEvents() override;
+
   std::unique_ptr<DeviceInfo> getDeviceInfo() override;
 
  private:
-  std::jthread eosEventThread;
-
   bool isEos();
   bool isEosM();
-
-  void checkEvents();
 
   template <std::unsigned_integral T>
   void eosSetDeviceProp(uint32_t devicePropertyCode, T value) {

@@ -6,6 +6,7 @@
 #include "ptpData.h"
 
 #include <mutex>
+#include <thread>
 #include <utility>
 
 class PTPTransport {
@@ -87,37 +88,24 @@ class PTPCamera : protected PTP, public Camera {
   PTPCamera(PTP&& ptp, VendorExtensionId vendorExtensionId)
       : PTP(std::move(ptp)), vendorExtensionId(vendorExtensionId) {}
 
-  void connect() override { openSession(); }
-
-  void disconnect() override {
-    closeSession();
-    closeTransport();
-  }
-
-  bool isConnected() override { return isSessionOpen && isTransportOpen(); }
+  void connect() override;
+  void disconnect() override;
+  bool isConnected() override;
 
  protected:
   const VendorExtensionId vendorExtensionId;
 
-  std::shared_ptr<DeviceInfo> getCachedDI() {
-    if (!cachedDI)
-      cachedDI = getDeviceInfo();
-    return cachedDI;
-  }
+  virtual void checkEvents() = 0;
+  void startEventThread();
+  void stopEventThread();
 
-  void invalidateCachedDI() { cachedDI = nullptr; }
-
-  bool isOpSupported(uint16_t operationCode) {
-    return getCachedDI()->isOpSupported(
-        operationCode, static_cast<uint32_t>(vendorExtensionId));
-  }
-
-  bool isPropSupported(uint16_t propertyCode) {
-    return getCachedDI()->isPropSupported(
-        propertyCode, static_cast<uint32_t>(vendorExtensionId));
-  }
+  std::shared_ptr<DeviceInfo> getCachedDI();
+  void invalidateCachedDI();
+  bool isOpSupported(uint16_t operationCode);
+  bool isPropSupported(uint16_t propertyCode);
 
  private:
+  std::jthread eventThread;
   std::shared_ptr<DeviceInfo> cachedDI;
 };
 

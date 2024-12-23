@@ -43,10 +43,12 @@ void setup() {
   Serial.println();
 
   Serial.print("Starting soft-AP... ");
-  WiFi.softAP("ESP8266_AP", "defgecd7");
+  WiFi.softAP("ESP32_AP", "defgecd7");
 
   Serial.print("Soft-AP IP address: ");
   Serial.println(WiFi.softAPIP());
+
+  delay(10000);
 
   esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
   cfg.stack_size = (4096);
