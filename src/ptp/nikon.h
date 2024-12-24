@@ -4,8 +4,6 @@
 #include "nikonData.h"
 #include "ptp.h"
 
-#include <thread>
-
 class NikonPTPCamera : public PTPCamera {
  public:
   NikonPTPCamera(PTP&& ptp)

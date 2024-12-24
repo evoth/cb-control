@@ -9,9 +9,8 @@ int main() {
   std::unique_ptr<Camera> camera =
       CameraFactory(guid, "Tim", "192.168.4.7").create();
 
-  if (!camera) {
+  if (!camera)
     return 1;
-  }
 
   camera->connect();
   std::this_thread::sleep_for(std::chrono::seconds(5));

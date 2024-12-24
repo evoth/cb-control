@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "Win32",
+            "name": "PlatformIO",
             "includePath": [
                 "c:/Users/evoth/E/Stuff/Github_evoth/cb-control/cb-control/src",
                 "C:/Users/evoth/.platformio/packages/framework-arduinoespressif32@src-a01c93a63f3ed4184a2ede3960108545/libraries/WiFi/src",
@@ -613,6 +613,21 @@
                 "-mlongcalls",
                 ""
             ]
+        },
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.19041.0",
+            "compilerPath": "cl.exe",
+            "cStandard": "c17",
+            "intelliSenseMode": "windows-msvc-x64"
         }
     ],
     "version": 4

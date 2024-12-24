@@ -1,13 +1,13 @@
 #ifndef CB_CONTROL_ESP32_SOCKET_H
 #define CB_CONTROL_ESP32_SOCKET_H
 
-#include "../ptp/ip.h"
+#include "../socket.h"
 
 #include <WiFi.h>
 #include <elapsedMillis.h>
 
 // TODO: Figure out error logging
-class ESP32Socket : public Socket {
+class ESP32Socket : public BufferedSocket {
  public:
   ~ESP32Socket() { client.stop(); }
 
@@ -22,29 +22,23 @@ class ESP32Socket : public Socket {
 
   bool isConnected() override { return client.connected(); }
 
-  // TODO: Use a buffer (ESP32 WiFi.h supports that, unlike pure Arduino)
-  int send(const Buffer& buffer) override {
-    int totalSent = 0;
-    while (totalSent < buffer.size() && client.write(buffer[totalSent])) {
-      totalSent++;
-    }
-    return totalSent;
+ protected:
+  int send(const char* buff, int length) override {
+    return client.write(buff, length);
   }
 
-  // TODO: Use a buffer (ESP32 WiFi.h supports that, unlike pure Arduino)
-  int recv(Buffer& buffer, int length, unsigned int timeoutMs) override {
-    elapsedMillis elapsed;
+  int recv(char* buff, int length) override {
+    return client.read((uint8_t*)buff, length);
+  }
 
-    int totalReceived = 0;
-    while (totalReceived < length && elapsed < timeoutMs) {
-      if (client.available()) {
-        buffer.push_back(client.read());
-        totalReceived++;
-      }
+  bool wait(unsigned int timeoutMs) override {
+    elapsedMillis elapsed;
+    while (elapsed < timeoutMs) {
+      if (client.available())
+        return true;
       vTaskDelay(1);
     }
-
-    return totalReceived;
+    return false;
   }
 
  private:

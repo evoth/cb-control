@@ -7,19 +7,19 @@
 void PTP::openTransport() {
   Logger::log("Opening transport...");
   if (!transport)
-    throw PTPTransportException("Transport is null.");
+    throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
   transport->open();
 }
 
 void PTP::closeTransport() {
   if (!transport)
-    throw PTPTransportException("Transport is null.");
+    throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
   transport->close();
 }
 
 bool PTP::isTransportOpen() {
   if (!transport)
-    throw PTPTransportException("Transport is null.");
+    throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
   return transport->isOpen();
 }
 
@@ -55,13 +55,14 @@ OperationResponseData PTP::send(uint16_t operationCode,
   std::lock_guard lock(transactionMutex);
 
   if (!transport)
-    throw PTPTransportException("Transport is null.");
+    throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
 
   OperationRequestData request(true, true, operationCode, getSessionId(),
                                getTransactionId(), params, data);
   OperationResponseData response = transport->transaction(request);
   if (response.responseCode != ResponseCode::OK)
-    throw PTPOperationException(response.responseCode);
+    throw Exception(ExceptionContext::PTPIPTransaction,
+                    ExceptionType::OperationFailure);
 
   return response;
 };
@@ -71,13 +72,14 @@ OperationResponseData PTP::recv(uint16_t operationCode,
   std::lock_guard lock(transactionMutex);
 
   if (!transport)
-    throw PTPTransportException("Transport is null.");
+    throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
 
   OperationRequestData request(true, false, operationCode, getSessionId(),
                                getTransactionId(), params);
   OperationResponseData response = transport->transaction(request);
   if (response.responseCode != ResponseCode::OK)
-    throw PTPOperationException(response.responseCode);
+    throw Exception(ExceptionContext::PTPIPTransaction,
+                    ExceptionType::OperationFailure);
 
   return response;
 };
@@ -87,13 +89,14 @@ OperationResponseData PTP::mesg(uint16_t operationCode,
   std::lock_guard lock(transactionMutex);
 
   if (!transport)
-    throw PTPTransportException("Transport is null.");
+    throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
 
   OperationRequestData request(false, false, operationCode, getSessionId(),
                                getTransactionId(), params);
   OperationResponseData response = transport->transaction(request);
   if (response.responseCode != ResponseCode::OK)
-    throw PTPOperationException(response.responseCode);
+    throw Exception(ExceptionContext::PTPIPTransaction,
+                    ExceptionType::OperationFailure);
 
   return response;
 };

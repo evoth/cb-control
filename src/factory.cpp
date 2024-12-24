@@ -1,4 +1,5 @@
 #include "factory.h"
+
 #include "logger.h"
 #include "ptp/canon.h"
 #include "ptp/nikon.h"

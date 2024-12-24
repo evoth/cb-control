@@ -2,29 +2,8 @@
 #define CB_CONTROL_PTP_IP_H
 
 #include "../logger.h"
+#include "../socket.h"
 #include "ptp.h"
-
-// TODO: Use noexcept?
-class Socket {
- public:
-  virtual ~Socket() = default;
-
-  virtual bool connect(const std::string& ip,
-                       int port) = 0;  // Should not throw exceptions
-  virtual bool close() = 0;            // Should not throw exceptions
-  virtual bool isConnected() = 0;      // Should not throw exceptions
-
-  void sendPacket(Packet& packet);
-  void recvPacket(Buffer& buffer, unsigned int timeoutMs = 10000);
-
- protected:
-  virtual int send(const Buffer& buffer) = 0;  // Should not throw exceptions
-  // Attempts to append `length` bytes to the buffer, waiting until enough bytes
-  // have accumulated or until `timeoutMs` milliseconds have passed
-  virtual int recv(Buffer& buffer,
-                   int length,
-                   unsigned int timeoutMs) = 0;  // Should not throw exceptions
-};
 
 // TODO: Figure out where to catch and deal with exceptions
 class PTPIP : public PTPTransport {
@@ -41,10 +20,8 @@ class PTPIP : public PTPTransport {
         clientName(clientName),
         ip(ip),
         port(port) {
-    if (!this->commandSocket)
-      throw PTPTransportException("No command socket provided.");
-    if (!this->eventSocket)
-      throw PTPTransportException("No event socket provided.");
+    if (!this->commandSocket || !this->eventSocket)
+      throw Exception(ExceptionContext::Socket, ExceptionType::IsNull);
   }
 
   virtual ~PTPIP() {

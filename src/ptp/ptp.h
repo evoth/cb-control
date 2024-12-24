@@ -58,8 +58,8 @@ class PTP {
     if (auto devicePropDesc =
             Packet::unpackAs<DevicePropDesc<T>, DevicePropDesc<T>>(data))
       return devicePropDesc;
-    throw PTPException(
-        "Unable to unpack DevicePropDesc; wrong data type provided.");
+    return Exception(ExceptionContext::PTPDevicePropDesc,
+                     ExceptionType::WrongType);
   }
 
  protected:

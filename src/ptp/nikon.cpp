@@ -1,7 +1,5 @@
 #include "nikon.h"
 
-#include <chrono>
-
 void NikonPTPCamera::openSession() {
   PTP::openSession();
 

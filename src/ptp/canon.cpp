@@ -1,12 +1,11 @@
 #include "canon.h"
 
-#include <chrono>
-
 void CanonPTPCamera::openSession() {
   PTP::openSession();
 
   if (!isEos())
-    throw PTPCameraException("Unsupported Canon camera.");
+    throw Exception(ExceptionContext::CameraConnect,
+                    ExceptionType::UnsupportedCamera);
 
   // TODO: Include specific exceptions?
   uint32_t remoteMode = isEosM() ? 0x15 : 0x01;

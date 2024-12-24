@@ -1,9 +1,9 @@
 #ifndef CB_CONTROL_PTP_PTPDATA_H
 #define CB_CONTROL_PTP_PTPDATA_H
 
+#include "../exception.h"
 #include "../packet.h"
 
-#include <exception>
 #include <map>
 #include <typeindex>
 #include <typeinfo>
@@ -11,43 +11,43 @@
 // TODO: Figure out where to catch and deal with exceptions (probably within
 // PTP class)
 
-class PTPException : public std::exception {
- public:
-  template <typename... Args>
-  PTPException(const char* format, Args... args) {
-    snprintf(msg, sizeof(msg), format, args...);
-  }
+// class PTPException : public std::exception {
+//  public:
+//   template <typename... Args>
+//   PTPException(const char* format, Args... args) {
+//     snprintf(msg, sizeof(msg), format, args...);
+//   }
 
-  virtual ~PTPException() = default;
+//   virtual ~PTPException() = default;
 
-  virtual const char* what() const noexcept override { return msg; }
+//   virtual const char* what() const noexcept override { return msg; }
 
- private:
-  char msg[256];
-};
+//  private:
+//   char msg[256];
+// };
 
-class PTPOperationException : public PTPException {
- public:
-  const int errorCode;
+// class PTPOperationException : public PTPException {
+//  public:
+//   const int errorCode;
 
-  PTPOperationException(uint32_t responseCode)
-      : PTPException("PTP Operation Error: 0x%04x", responseCode),
-        errorCode(responseCode) {}
-};
+//   PTPOperationException(uint32_t responseCode)
+//       : PTPException("PTP Operation Error: 0x%04x", responseCode),
+//         errorCode(responseCode) {}
+// };
 
-class PTPTransportException : public PTPException {
- public:
-  template <typename... Args>
-  PTPTransportException(const char* format, Args... args)
-      : PTPException(format, args...) {}
-};
+// class PTPTransportException : public PTPException {
+//  public:
+//   template <typename... Args>
+//   PTPTransportException(const char* format, Args... args)
+//       : PTPException(format, args...) {}
+// };
 
-class PTPCameraException : public PTPException {
- public:
-  template <typename... Args>
-  PTPCameraException(const char* format, Args... args)
-      : PTPException(format, args...) {}
-};
+// class PTPCameraException : public PTPException {
+//  public:
+//   template <typename... Args>
+//   PTPCameraException(const char* format, Args... args)
+//       : PTPException(format, args...) {}
+// };
 
 struct OperationRequestData {
   const bool dataPhase;
@@ -186,7 +186,8 @@ class DevicePropDesc : public PTPPacket {
   DevicePropDesc() {
     if (!DataTypeMap.contains(typeid(T))) {
       // TODO: Specific exception type
-      throw PTPException("Unsupported DevicePropValue type.");
+      throw Exception(ExceptionContext::PTPDevicePropDesc,
+                      ExceptionType::UnsupportedType);
     }
     dataType = DataTypeMap.at(typeid(T));
 
