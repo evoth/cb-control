@@ -43,3 +43,23 @@ C++ module for camera control using various protocols.
   - The state reconstruction can be done in C++ and/or JavaScript... hmm...
 - It's possible that the sequence module can operate entirely on events without having to worry about state
 - Everything is events
+
+## Even More Ideas
+- The main data structure is sorta like a nested map
+- Each state change can be distilled to a camera ID, prop ID, and value (the type of the prop is already tied to the prop ID)
+  - On either side, if the camera/property in question doesn't yet exist, it is created
+  - A command will only induce a state change if it is different to the current state
+  - Examples:
+    - Command (cameraId=1, connected=true)
+      - Assuming camera with id=1 doesn't exist yet, it will be created within the local state and connected
+      - But of course, information is needed to connect to the camera
+      - Which brings me to my next point
+- Certain state properties have to be changed together (okay it's kind of like function/event parameters but bear with me), which is serialized in the different event packet types
+- But maybe these "properties that have to be changed together" are better defined as a single property (with multiple fields) that can only be changed atomically
+  - For example, the connection information for a camera can be a single property, which will take different forms for PTP/IP, PTP/USB, Bluetooth, etc. So changing the property would destroy the underlying camera implementation and create a new one with the appropriate type
+- Forget commands/events; there are two types of **events**: **requests** and **results**. They are essentially the same (state change) except for a boolean indicator
+- Requests trigger necessary actions to change the state from its current value to the value in the request (doesn't change the state directly)
+- Results overwrite the current state
+- One state object can **control** another by only outputting requests and only receiving results, while the other does the opposite
+- The state object being controlled also listens to its own result events
+- Example: The backend is a state object in C++ which controls cameras in response to requests. Its results are piped to the frontend, which updates the UI. When a user interacts with the UI, it produces requests which are sent to the backend.
