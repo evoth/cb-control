@@ -5,9 +5,9 @@
 #include "ptp/nikon.h"
 
 #if defined(_WIN32)
-#include "windows/socket.h"
+#include "platforms/windows/socket.h"
 #elif defined(ESP32)
-#include "esp32/socket.h"
+#include "platforms/esp32/socket.h"
 #endif
 
 std::unique_ptr<Camera> PTPCameraFactory::create() const {

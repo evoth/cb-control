@@ -2,7 +2,6 @@
 #define CB_CONTROL_PTP_PTP_H
 
 #include "../camera.h"
-#include "../logger.h"
 #include "ptpData.h"
 
 #include <mutex>
@@ -34,7 +33,6 @@ class PTP {
         transactionId(std::exchange(o.transactionId, 0)) {};
 
   virtual ~PTP() {
-    Logger::log("PTP destructed");
     try {
       closeSession();
     } catch (const std::exception& e) {

@@ -1,8 +1,7 @@
 #ifndef CB_CONTROL_WINDOWS_SOCKET_H
 #define CB_CONTROL_WINDOWS_SOCKET_H
 
-#include "../logger.h"
-#include "../socket.h"
+#include "../../socket.h"
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -17,7 +16,6 @@ class WindowsSocket : public BufferedSocket {
   }
 
   ~WindowsSocket() {
-    Logger::log("Socket destructed");
     closesocket(clientSocket);
     WSACleanup();
   }
@@ -59,7 +57,6 @@ class WindowsSocket : public BufferedSocket {
   }
 
   bool close() override {
-    Logger::log("Socket closed");
     int result = closesocket(clientSocket);
     clientSocket = INVALID_SOCKET;
     return result == 0;

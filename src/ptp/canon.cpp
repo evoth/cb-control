@@ -88,8 +88,7 @@ void CanonPTPCamera::checkEvents() {
   eventData.unpack(data);
   for (Buffer& event : eventData.events) {
     if (auto propChanged = EOSEventPacket::unpackAs<EOSPropChanged>(event)) {
-      Logger::log(">> Prop change (propCode=0x%04x, propValue=0x%04x)",
-                  propChanged->propertyCode, propChanged->propertyValue);
+      // TODO: Update Camera::props
     }
   }
 }

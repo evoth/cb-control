@@ -5,7 +5,6 @@
 #endif
 
 void PTP::openTransport() {
-  Logger::log("Opening transport...");
   if (!transport)
     throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
   transport->open();

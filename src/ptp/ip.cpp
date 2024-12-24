@@ -1,6 +1,8 @@
 #include "ip.h"
 #include "ipData.h"
 
+#include "../logger.h"
+
 // TODO: Formal logging
 
 void PTPIP::open() {

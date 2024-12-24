@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_ESP32_SOCKET_H
 #define CB_CONTROL_ESP32_SOCKET_H
 
-#include "../socket.h"
+#include "../../socket.h"
 
 #include <WiFi.h>
 #include <elapsedMillis.h>

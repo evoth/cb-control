@@ -1,7 +1,6 @@
 #ifndef CB_CONTROL_PTP_IP_H
 #define CB_CONTROL_PTP_IP_H
 
-#include "../logger.h"
 #include "../socket.h"
 #include "ptp.h"
 
@@ -24,10 +23,7 @@ class PTPIP : public PTPTransport {
       throw Exception(ExceptionContext::Socket, ExceptionType::IsNull);
   }
 
-  virtual ~PTPIP() {
-    Logger::log("PTPIP destructed");
-    close();
-  }
+  virtual ~PTPIP() { close(); }
 
   void open() override;
 

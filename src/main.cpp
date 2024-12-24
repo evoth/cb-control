@@ -1,4 +1,5 @@
 #include "factory.h"
+#include "logger.h"
 
 #include <thread>
 
@@ -6,8 +7,10 @@ int main() {
   const std::array<uint8_t, 16> guid(
       {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7});
 
-  std::unique_ptr<Camera> camera =
-      CameraFactory(guid, "Tim", "192.168.4.7").create();
+  CameraFactory cameraFactory(guid, "Tim", "192.168.4.7");
+
+  Logger::log("Connecting to camera...");
+  std::unique_ptr<Camera> camera = cameraFactory.create();
 
   if (!camera)
     return 1;
@@ -15,19 +18,16 @@ int main() {
   camera->connect();
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
-  camera->setProp(CameraProp::Aperture, CameraPropValue(56, 10));
-  camera->setProp(CameraProp::ShutterSpeed, CameraPropValue(1, 100));
-  camera->setProp(CameraProp::ISO, CameraPropValue(400, 1));
+  camera->setProp(CameraProp::Aperture, {56, 10});
+  camera->setProp(CameraProp::ShutterSpeed, {1, 100});
+  camera->setProp(CameraProp::ISO, {400, 1});
   camera->triggerCapture();
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  camera->setProp(CameraProp::Aperture, CameraPropValue(80, 10));
-  camera->setProp(CameraProp::ShutterSpeed, CameraPropValue(1, 1000));
-  camera->setProp(CameraProp::ISO, CameraPropValue(100, 1));
+  camera->setProp(CameraProp::Aperture, {80, 10});
+  camera->setProp(CameraProp::ShutterSpeed, {1, 1000});
+  camera->setProp(CameraProp::ISO, {100, 1});
   camera->triggerCapture();
-  std::this_thread::sleep_for(std::chrono::seconds(5));
-
-  camera->disconnect();
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
   return 0;
