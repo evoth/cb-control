@@ -43,9 +43,10 @@ class PTPIPFactory : public Factory<PTPTransport> {
   const int port;
 };
 
-class CameraFactory : public Factory<Camera> {
+// TODO: How to handle when camera doesn't exist / isn't connected?
+class CameraWrapper : public Camera {
  public:
-  CameraFactory(std::array<uint8_t, 16> clientGuid,
+  CameraWrapper(std::array<uint8_t, 16> clientGuid,
                 std::string clientName,
                 std::string ip,
                 int port = 15740)
@@ -53,13 +54,35 @@ class CameraFactory : public Factory<Camera> {
             std::make_unique<PTPIPFactory>(clientGuid, clientName, ip, port))) {
   }
 
-  bool isSupported() const override { return cameraFactory->isSupported(); }
-  std::unique_ptr<Camera> create() const override {
-    return cameraFactory->create();
+  void connect() override {
+    if (!camera) {
+      camera = cameraFactory->create();
+      if (!camera)
+        throw Exception(ExceptionContext::Camera, ExceptionType::IsNull);
+    }
+    camera->connect();
+  }
+
+  void disconnect() override {
+    if (camera)
+      camera->disconnect();
+  }
+
+  bool isConnected() override { return camera && camera->isConnected(); }
+
+  void triggerCapture() override {
+    if (camera)
+      camera->triggerCapture();
+  }
+
+  void setProp(CameraProp prop, CameraPropValue value) override {
+    if (camera)
+      camera->setProp(prop, value);
   }
 
  private:
   std::unique_ptr<Factory<Camera>> cameraFactory;
+  std::unique_ptr<Camera> camera;
 };
 
 #endif

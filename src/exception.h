@@ -11,6 +11,8 @@ enum class ExceptionContext {
   PTPIPTransaction,
   PTPTransport,
   PTPDevicePropDesc,
+  Factory,
+  Camera,
 };
 
 enum class ExceptionType {
@@ -27,6 +29,7 @@ enum class ExceptionType {
   WrongType,
   UnsupportedType,
   WrongDataLength,
+  UnsupportedTransport,
 };
 
 class Exception : public std::exception {

@@ -25,7 +25,7 @@ std::unique_ptr<Camera> PTPCameraFactory::create() const {
     return std::make_unique<NikonPTPCamera>(std::move(ptp));
   }
 
-  return nullptr;
+  throw Exception(ExceptionContext::Factory, ExceptionType::UnsupportedCamera);
 }
 
 bool PTPIPFactory::isSupported() const {
@@ -47,6 +47,7 @@ std::unique_ptr<PTPTransport> PTPIPFactory::create() const {
                                  std::make_unique<ESP32Socket>(), clientGuid,
                                  clientName, ip);
 #else
-  return nullptr;
+  throw Exception(ExceptionContext::Factory,
+                  ExceptionType::UnsupportedTransport);
 #endif
 }

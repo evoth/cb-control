@@ -69,23 +69,23 @@ enum class CameraProp {
   EVComp,
 };
 
-struct CameraPropDesc {
-  CameraPropValue currentValue;
-  std::vector<CameraPropValue> supportedValues;
-  bool isEnabled = false;
-  bool isUpdated = false;
-};
+// struct CameraPropDesc {
+//   CameraPropValue currentValue;
+//   std::vector<CameraPropValue> supportedValues;
+//   bool isEnabled = false;
+//   bool isUpdated = false;
+// };
 
-typedef std::map<CameraProp, std::unique_ptr<CameraPropDesc>> CameraPropMap;
+// typedef std::map<CameraProp, std::unique_ptr<CameraPropDesc>> CameraPropMap;
 
-enum class CameraMode {
-  Unknown,
-  Manual,
-  Av,
-  Tv,
-  Program,
-  Auto,
-};
+// enum class CameraMode {
+//   Unknown,
+//   Manual,
+//   Av,
+//   Tv,
+//   Program,
+//   Auto,
+// };
 
 class Camera {
  public:
@@ -99,8 +99,8 @@ class Camera {
   virtual void setProp(CameraProp prop, CameraPropValue value) = 0;
 
  protected:
-  CameraPropMap props;
-  CameraMode mode = CameraMode::Unknown;
+  // CameraPropMap props;
+  // CameraMode mode = CameraMode::Unknown;
 };
 
 #endif
