@@ -32,3 +32,14 @@ C++ module for camera control using various protocols.
   - Camera objects contain necessary information to connect to the camera (like CameraWrapper or Factory\<Camera>)
   - Each camera-specific command specifies the target camera via ID
   - Events are consolidated from individual camera queues, using camera IDs to specify origin
+
+## More Ideas
+- Both the command and event streams consist of the same "events"
+- Events are simply state mutations
+  - Commands are requested mutations
+  - Events are mutations that have already happened
+- The "cameras" within the control module don't have to hold any state; they're simply channels for events (back and forth)
+- The actual state is reconstructed on the other end of the streams (or somewhere along the way)
+  - The state reconstruction can be done in C++ and/or JavaScript... hmm...
+- It's possible that the sequence module can operate entirely on events without having to worry about state
+- Everything is events
