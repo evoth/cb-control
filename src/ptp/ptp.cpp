@@ -14,6 +14,7 @@ void PTP::closeTransport() {
   if (!transport)
     throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
   transport->close();
+  isSessionOpen = false;
 }
 
 bool PTP::isTransportOpen() {
@@ -102,6 +103,7 @@ OperationResponseData PTP::mesg(uint16_t operationCode,
 
 void PTPCamera::connect() {
   openSession();
+  event<ConnectedEvent>(true);
 }
 
 void PTPCamera::disconnect() {
@@ -111,6 +113,11 @@ void PTPCamera::disconnect() {
 
 bool PTPCamera::isConnected() {
   return isSessionOpen && isTransportOpen();
+}
+
+void PTPCamera::closeTransport() {
+  PTP::closeTransport();
+  event<ConnectedEvent>(false);
 }
 
 void PTPCamera::startEventThread() {

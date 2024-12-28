@@ -56,10 +56,20 @@ C++ module for camera control using various protocols.
       - Which brings me to my next point
 - Certain state properties have to be changed together (okay it's kind of like function/event parameters but bear with me), which is serialized in the different event packet types
 - But maybe these "properties that have to be changed together" are better defined as a single property (with multiple fields) that can only be changed atomically
-  - For example, the connection information for a camera can be a single property, which will take different forms for PTP/IP, PTP/USB, Bluetooth, etc. So changing the property would destroy the underlying camera implementation and create a new one with the appropriate type
+  - For example, the connection information for a camera (including its ID) can be a single property, which will take different forms for PTP/IP, PTP/USB, Bluetooth, etc. So changing the property would destroy the underlying camera implementation and create a new one with the appropriate type
 - Forget commands/events; there are two types of **events**: **requests** and **results**. They are essentially the same (state change) except for a boolean indicator
 - Requests trigger necessary actions to change the state from its current value to the value in the request (doesn't change the state directly)
 - Results overwrite the current state
 - One state object can **control** another by only outputting requests and only receiving results, while the other does the opposite
 - The state object being controlled also listens to its own result events
 - Example: The backend is a state object in C++ which controls cameras in response to requests. Its results are piped to the frontend, which updates the UI. When a user interacts with the UI, it produces requests which are sent to the backend.
+
+I shall call this method of control "Puppeteering"
+
+Actually, none of this really matters and we've basically just invented functions and return values again, especially since we'll need to make different functions to handle each state change anyways
+
+## Practical Ideas
+- Cameras will have a queue of event packets (and add to it whenever something happens)
+- The state object will contain camera/s, filtering and coalescing events as needed before packaging them up into container packets and putting them in the result stream
+  - Redundant event packets can be omitted
+  - Event packets are combined into carrier packets so we don't have to send hundreds of tiny packets when lots of events are emitted at once

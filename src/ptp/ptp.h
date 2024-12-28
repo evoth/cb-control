@@ -40,8 +40,8 @@ class PTP {
     }
   }
 
-  void openTransport();
-  void closeTransport();
+  virtual void openTransport();
+  virtual void closeTransport();
   bool isTransportOpen();
 
   virtual void openSession();
@@ -92,6 +92,8 @@ class PTPCamera : protected PTP, public Camera {
 
  protected:
   const VendorExtensionId vendorExtensionId;
+
+  void closeTransport() override;
 
   virtual void checkEvents() = 0;
   void startEventThread();
