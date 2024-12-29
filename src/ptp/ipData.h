@@ -165,6 +165,7 @@ class EndData : public IPPacket {
   uint32_t transactionId = 0;
   Buffer payload;
 
+  // TODO: Use move semantics for payload
   EndData(uint32_t transactionId = 0, Buffer payload = {})
       : IPPacket(0x0c), transactionId(transactionId), payload(payload) {
     field(this->transactionId);

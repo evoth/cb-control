@@ -16,8 +16,10 @@ class Socket {
 
   void sendPacket(Packet& packet) {
     Buffer buffer = packet.pack();
-    if (send(buffer) < buffer.size())
+    if (send(buffer) < buffer.size()) {
+      close();
       throw Exception(ExceptionContext::Socket, ExceptionType::SendFailure);
+    }
   }
 
   template <typename T>
@@ -27,14 +29,18 @@ class Socket {
     buffer.clear();
 
     int targetBytes = sizeof(lengthPacket.length);
-    if (recv(buffer, targetBytes, timeoutMs) < targetBytes)
+    if (recv(buffer, targetBytes, timeoutMs) < targetBytes) {
+      close();
       throw Exception(ExceptionContext::Socket, ExceptionType::TimedOut);
+    }
 
     lengthPacket.unpack(buffer);
 
     targetBytes = lengthPacket.length - targetBytes;
-    if (recv(buffer, targetBytes, timeoutMs) < targetBytes)
+    if (recv(buffer, targetBytes, timeoutMs) < targetBytes) {
+      close();
       throw Exception(ExceptionContext::Socket, ExceptionType::TimedOut);
+    }
   }
 
  protected:

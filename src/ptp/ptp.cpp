@@ -24,6 +24,7 @@ bool PTP::isTransportOpen() {
 }
 
 void PTP::openSession() {
+  std::lock_guard lock(sessionMutex);
   if (isSessionOpen)
     return;
   if (!isTransportOpen())
@@ -35,6 +36,7 @@ void PTP::openSession() {
 }
 
 void PTP::closeSession() {
+  std::lock_guard lock(sessionMutex);
   if (!isSessionOpen)
     return;
   mesg(OperationCode::CloseSession);
@@ -48,57 +50,47 @@ std::unique_ptr<DeviceInfo> PTP::getDeviceInfo() {
   return deviceInfo;
 }
 
+OperationResponseData PTP::transaction(bool dataPhase,
+                                       bool sending,
+                                       uint16_t operationCode,
+                                       std::array<uint32_t, 5> params,
+                                       std::vector<unsigned char> data) {
+  std::lock_guard lock(transactionMutex);
+
+  if (!transport)
+    throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
+
+  if (!isTransportOpen())
+    throw Exception(ExceptionContext::PTPTransport,
+                    ExceptionType::NotConnected);
+
+  OperationRequestData request(dataPhase, sending, operationCode,
+                               getSessionId(), getTransactionId(), params,
+                               data);
+
+  OperationResponseData response = transport->transaction(request);
+  if (response.responseCode != ResponseCode::OK)
+    throw Exception(ExceptionContext::PTPIPTransaction,
+                    ExceptionType::OperationFailure);
+
+  return response;
+}
+
 // TODO: Avoid copying `data`?
 OperationResponseData PTP::send(uint16_t operationCode,
                                 std::array<uint32_t, 5> params,
                                 std::vector<unsigned char> data) {
-  std::lock_guard lock(transactionMutex);
-
-  if (!transport)
-    throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
-
-  OperationRequestData request(true, true, operationCode, getSessionId(),
-                               getTransactionId(), params, data);
-  OperationResponseData response = transport->transaction(request);
-  if (response.responseCode != ResponseCode::OK)
-    throw Exception(ExceptionContext::PTPIPTransaction,
-                    ExceptionType::OperationFailure);
-
-  return response;
+  return transaction(true, true, operationCode, params, data);
 };
 
 OperationResponseData PTP::recv(uint16_t operationCode,
                                 std::array<uint32_t, 5> params) {
-  std::lock_guard lock(transactionMutex);
-
-  if (!transport)
-    throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
-
-  OperationRequestData request(true, false, operationCode, getSessionId(),
-                               getTransactionId(), params);
-  OperationResponseData response = transport->transaction(request);
-  if (response.responseCode != ResponseCode::OK)
-    throw Exception(ExceptionContext::PTPIPTransaction,
-                    ExceptionType::OperationFailure);
-
-  return response;
+  return transaction(true, false, operationCode, params);
 };
 
 OperationResponseData PTP::mesg(uint16_t operationCode,
                                 std::array<uint32_t, 5> params) {
-  std::lock_guard lock(transactionMutex);
-
-  if (!transport)
-    throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
-
-  OperationRequestData request(false, false, operationCode, getSessionId(),
-                               getTransactionId(), params);
-  OperationResponseData response = transport->transaction(request);
-  if (response.responseCode != ResponseCode::OK)
-    throw Exception(ExceptionContext::PTPIPTransaction,
-                    ExceptionType::OperationFailure);
-
-  return response;
+  return transaction(false, false, operationCode, params);
 };
 
 void PTPCamera::connect() {
@@ -109,15 +101,11 @@ void PTPCamera::connect() {
 void PTPCamera::disconnect() {
   closeSession();
   closeTransport();
+  pushEvent<ConnectedEvent>(false);
 }
 
 bool PTPCamera::isConnected() {
   return isSessionOpen && isTransportOpen();
-}
-
-void PTPCamera::closeTransport() {
-  PTP::closeTransport();
-  pushEvent<ConnectedEvent>(false);
 }
 
 void PTPCamera::startEventThread() {
@@ -131,7 +119,17 @@ void PTPCamera::startEventThread() {
     while (true) {
       if (stoken.stop_requested())
         return;
-      checkEvents();
+
+      try {
+        if (!isTransportOpen()) {
+          pushEvent<ConnectedEvent>(false);
+          break;
+        }
+        checkEvents();
+      } catch (Exception& e) {
+        pushEvent(e.createEvent());
+      }
+
       // TODO: Make this adjustable
       std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }

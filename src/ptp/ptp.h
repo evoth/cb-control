@@ -40,8 +40,8 @@ class PTP {
     }
   }
 
-  virtual void openTransport();
-  virtual void closeTransport();
+  void openTransport();
+  void closeTransport();
   bool isTransportOpen();
 
   virtual void openSession();
@@ -76,9 +76,15 @@ class PTP {
   uint32_t sessionId = 0;
   uint32_t transactionId = 0;
   std::mutex transactionMutex;
+  std::mutex sessionMutex;
 
   uint32_t getSessionId() { return isSessionOpen ? sessionId : 0; }
   uint32_t getTransactionId() { return isSessionOpen ? transactionId++ : 0; }
+  OperationResponseData transaction(bool dataPhase,
+                                    bool sending,
+                                    uint16_t operationCode,
+                                    std::array<uint32_t, 5> params = {},
+                                    std::vector<unsigned char> data = {});
 };
 
 class PTPCamera : protected PTP, public Camera {
@@ -92,8 +98,6 @@ class PTPCamera : protected PTP, public Camera {
 
  protected:
   const VendorExtensionId vendorExtensionId;
-
-  void closeTransport() override;
 
   virtual void checkEvents() = 0;
   void startEventThread();

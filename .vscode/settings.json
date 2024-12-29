@@ -89,7 +89,8 @@
       "semaphore": "cpp",
       "span": "cpp",
       "typeindex": "cpp",
-      "*.inc": "cpp"
+      "*.inc": "cpp",
+      "shared_mutex": "cpp"
     },
     "[cpp]": {
       "editor.defaultFormatter": "ms-vscode.cpptools",

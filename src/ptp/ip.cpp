@@ -58,10 +58,6 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
       request.operationCode, request.transactionId, request.params[0],
       request.dataPhase, request.sending);
 
-  if (!isOpen())
-    throw Exception(ExceptionContext::PTPTransport,
-                    ExceptionType::NotConnected);
-
   DataPhaseInfo dataPhaseInfo = (request.dataPhase && request.sending)
                                     ? DataPhaseInfo::DataOut
                                     : DataPhaseInfo::DataIn;
