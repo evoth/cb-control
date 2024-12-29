@@ -28,13 +28,6 @@
 // TODO: Return types? Exception handling?
 
 #include "event.h"
-#include "logger.h"
-
-#include <map>
-#include <memory>
-#include <optional>
-#include <queue>
-#include <utility>
 
 // Values are stored as (numerator, denominator)
 typedef std::pair<uint32_t, uint32_t> CameraPropValue;
@@ -91,11 +84,9 @@ enum class CameraProp {
 //   Auto,
 // };
 
-class Camera {
+class Camera : public EventManager<EventPacket> {
  public:
   virtual ~Camera() = default;
-
-  std::queue<std::unique_ptr<EventPacket>> events;
 
   virtual void connect() = 0;
   virtual void disconnect() = 0;
@@ -104,17 +95,14 @@ class Camera {
   virtual void triggerCapture() = 0;
   virtual void setProp(CameraProp prop, CameraPropValue value) = 0;
 
+  void requestEvent(EventPacket& event) override {
+    Logger::log("New request event:");
+    Logger::log(event);
+  }
+
  protected:
   // CameraPropMap props;
   // CameraMode mode = CameraMode::Unknown;
-
-  template <typename T, typename... Args>
-    requires std::derived_from<T, EventPacket>
-  void event(Args&&... args) {
-    events.push(std::make_unique<T>(std::forward<Args>(args)...));
-    Logger::log("New event:");
-    Logger::log(*events.back());
-  }
 };
 
 #endif
