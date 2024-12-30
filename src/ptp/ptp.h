@@ -87,14 +87,13 @@ class PTP {
                                     std::vector<unsigned char> data = {});
 };
 
-class PTPCamera : protected PTP, public Camera {
+class PTPCamera : protected PTP, public EventCamera {
  public:
   PTPCamera(PTP&& ptp, VendorExtensionId vendorExtensionId)
       : PTP(std::move(ptp)), vendorExtensionId(vendorExtensionId) {}
 
   void connect() override;
   void disconnect() override;
-  bool isConnected() override;
 
  protected:
   const VendorExtensionId vendorExtensionId;

@@ -56,6 +56,9 @@ class Socket {
 #define BUFFERED_SOCKET_ERROR -1
 
 class BufferedSocket : public Socket {
+ public:
+  virtual ~BufferedSocket() = default;
+
  protected:
   int send(const Buffer& buffer) override;
   int recv(Buffer& buffer, int length, unsigned int timeoutMs) override;

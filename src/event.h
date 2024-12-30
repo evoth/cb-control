@@ -9,11 +9,9 @@
 #include <utility>
 
 template <typename T>
-class EventManager {
+class EventEmitter {
  public:
-  virtual ~EventManager() = default;
-
-  virtual void requestEvent(T&) {}
+  virtual ~EventEmitter() = default;
 
   template <typename U, typename... Args>
     requires std::derived_from<U, T>
@@ -45,36 +43,87 @@ class EventManager {
   std::queue<std::unique_ptr<T>> events;
 };
 
+template <typename T>
+class EventProxy : public EventEmitter<T> {
+ public:
+  virtual ~EventProxy() = default;
+
+  virtual void receiveEvent(std::unique_ptr<T> event) = 0;
+};
+
 class EventPacket : public Packet {
  public:
   uint32_t length = 0;
-  uint32_t eventId = 0;
+  uint32_t eventCode = 0;
 
-  EventPacket(uint32_t eventId = 0) : eventId(eventId) {
+  EventPacket(uint32_t eventCode = 0) : eventCode(eventCode) {
     lengthField(this->length);
-    typeField(this->eventId);
+    typeField(this->eventCode);
+  }
+
+  template <typename T>
+    requires(std::derived_from<T, EventPacket>)
+  static std::unique_ptr<T> unpackAs(const Buffer& buffer) {
+    return Packet::unpackAs<EventPacket, T>(buffer);
+  }
+};
+
+class EventContainer : public EventPacket {
+ public:
+  std::string id;
+  std::vector<Buffer> events;
+
+  // TODO: Use move semantics for events
+  EventContainer(std::string id = "", std::vector<Buffer> events = {})
+      : EventPacket(0x01), id(id), events(events) {
+    field(this->id);
+    field<EventPacket>(this->events);
   }
 };
 
 class ExceptionEvent : public EventPacket {
  public:
-  uint16_t context = 0;
-  uint16_t type = 0;
+  uint16_t contextCode = 0;
+  uint16_t typeCode = 0;
 
-  ExceptionEvent(uint16_t context = 0, uint16_t type = 0)
-      : EventPacket(0x01), context(context), type(type) {
-    field(this->context);
-    field(this->type);
+  ExceptionEvent(uint16_t contextCode = 0, uint16_t typeCode = 0)
+      : EventPacket(0x02), contextCode(contextCode), typeCode(typeCode) {
+    field(this->contextCode);
+    field(this->typeCode);
   }
 };
 
-class ConnectedEvent : public EventPacket {
+class ConnectEvent : public EventPacket {
  public:
   bool isConnected = false;
 
-  ConnectedEvent(bool isConnected = false)
-      : EventPacket(0x02), isConnected(isConnected) {
+  ConnectEvent(bool isConnected = false)
+      : EventPacket(0x03), isConnected(isConnected) {
     field(this->isConnected);
+  }
+};
+
+class CaptureEvent : public EventPacket {
+ public:
+  CaptureEvent() : EventPacket(0x04) {}
+};
+
+class SetPropEvent : public EventPacket {
+ public:
+  uint16_t propCode = 0;
+  uint32_t valueNumerator = 0;
+  uint32_t valueDenominator = 0;
+
+  SetPropEvent(uint16_t propCode = 0,
+               uint32_t valueNumerator = 0,
+               uint32_t valueDenominator = 0)
+      : EventPacket(0x05),
+        propCode(propCode),
+        valueNumerator(valueNumerator),
+        valueDenominator(valueDenominator) {
+    field(this->propCode);
+    field(this->valueNumerator);
+    field(this->valueDenominator);
   }
 };
 

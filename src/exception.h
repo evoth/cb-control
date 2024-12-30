@@ -14,7 +14,6 @@ enum class ExceptionContext {
   PTPTransport,
   PTPDevicePropDesc,
   Factory,
-  Camera,
 };
 
 enum class ExceptionType {

@@ -9,7 +9,7 @@ class NikonPTPCamera : public PTPCamera {
   NikonPTPCamera(PTP&& ptp)
       : PTPCamera(std::move(ptp), VendorExtensionId::Nikon) {}
 
-  void triggerCapture() override {}
+  void capture() override {}
   void setProp(CameraProp, CameraPropValue) override {}
 
  protected:

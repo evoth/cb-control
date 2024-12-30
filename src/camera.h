@@ -84,25 +84,21 @@ enum class CameraProp {
 //   Auto,
 // };
 
-class Camera : public EventManager<EventPacket> {
+class Camera {
  public:
   virtual ~Camera() = default;
 
   virtual void connect() = 0;
   virtual void disconnect() = 0;
-  virtual bool isConnected() = 0;
 
-  virtual void triggerCapture() = 0;
+  virtual void capture() = 0;
   virtual void setProp(CameraProp prop, CameraPropValue value) = 0;
-
-  void requestEvent(EventPacket& event) override {
-    Logger::log("New request event:");
-    Logger::log(event);
-  }
 
  protected:
   // CameraPropMap props;
   // CameraMode mode = CameraMode::Unknown;
 };
+
+class EventCamera : public Camera, public EventEmitter<EventPacket> {};
 
 #endif

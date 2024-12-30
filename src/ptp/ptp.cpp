@@ -95,17 +95,13 @@ OperationResponseData PTP::mesg(uint16_t operationCode,
 
 void PTPCamera::connect() {
   openSession();
-  pushEvent<ConnectedEvent>(true);
+  pushEvent<ConnectEvent>(true);
 }
 
 void PTPCamera::disconnect() {
   closeSession();
   closeTransport();
-  pushEvent<ConnectedEvent>(false);
-}
-
-bool PTPCamera::isConnected() {
-  return isSessionOpen && isTransportOpen();
+  pushEvent<ConnectEvent>(false);
 }
 
 void PTPCamera::startEventThread() {
@@ -122,7 +118,7 @@ void PTPCamera::startEventThread() {
 
       try {
         if (!isTransportOpen()) {
-          pushEvent<ConnectedEvent>(false);
+          pushEvent<ConnectEvent>(false);
           break;
         }
         checkEvents();

@@ -12,7 +12,7 @@ class CanonPTPCamera : public PTPCamera {
   CanonPTPCamera(PTP&& ptp)
       : PTPCamera(std::move(ptp), VendorExtensionId::Canon) {}
 
-  void triggerCapture() override;
+  void capture() override;
   void setProp(CameraProp prop, CameraPropValue value) override;
 
  protected:

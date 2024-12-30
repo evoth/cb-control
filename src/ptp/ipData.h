@@ -22,7 +22,7 @@ class IPPacket : public Packet {
   }
 
   template <typename T>
-    requires(std::derived_from<T, Packet>)
+    requires(std::derived_from<T, IPPacket>)
   static std::unique_ptr<T> unpackAs(const Buffer& buffer) {
     return Packet::unpackAs<IPPacket, T>(buffer);
   }
@@ -31,7 +31,7 @@ class IPPacket : public Packet {
 class InitCommandRequest : public IPPacket {
  public:
   std::array<uint8_t, 16> guid = {};
-  std::string name = "";
+  std::string name;
   uint32_t ptpVersion = 0x10000;
 
   InitCommandRequest(std::array<uint8_t, 16> guid = {}, std::string name = "")
@@ -46,7 +46,7 @@ class InitCommandAck : public IPPacket {
  public:
   uint32_t connectionNum = 0;
   std::array<uint8_t, 16> guid = {};
-  std::string name = "";
+  std::string name;
   uint32_t ptpVersion = 0x10000;
 
   InitCommandAck() : IPPacket(0x02) {

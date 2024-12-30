@@ -58,7 +58,7 @@ std::unique_ptr<DeviceInfo> CanonPTPCamera::getDeviceInfo() {
 }
 
 // TODO: Event monitoring and error checking/handling
-void CanonPTPCamera::triggerCapture() {
+void CanonPTPCamera::capture() {
   if (isOpSupported(CanonOperationCode::EOSRemoteReleaseOn)) {
     mesg(CanonOperationCode::EOSRemoteReleaseOn, {0x03, 0x00});
     // Get events?
@@ -86,7 +86,7 @@ void CanonPTPCamera::checkEvents() {
   Buffer data = recv(CanonOperationCode::EOSGetEvent).data;
   EOSEventData eventData;
   eventData.unpack(data);
-  for (Buffer& event : eventData.events) {
+  for (const Buffer& event : eventData.events) {
     if (auto propChanged = EOSEventPacket::unpackAs<EOSPropChanged>(event)) {
       // TODO: Update Camera::props
     }

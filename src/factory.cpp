@@ -10,7 +10,7 @@
 #include "platforms/esp32/socket.h"
 #endif
 
-std::unique_ptr<Camera> PTPCameraFactory::create() const {
+std::unique_ptr<EventCamera> PTPCameraFactory::create() const {
   PTP ptp(transportFactory->create());
   ptp.openTransport();
   std::unique_ptr<DeviceInfo> deviceInfo = ptp.getDeviceInfo();

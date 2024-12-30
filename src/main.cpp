@@ -1,5 +1,5 @@
-#include "factory.h"
 #include "logger.h"
+#include "proxy.h"
 
 #include <thread>
 
@@ -17,13 +17,13 @@ int main() {
     camera.setProp(CameraProp::Aperture, {56, 10});
     camera.setProp(CameraProp::ShutterSpeed, {1, 100});
     camera.setProp(CameraProp::ISO, {400, 1});
-    camera.triggerCapture();
+    camera.capture();
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     camera.setProp(CameraProp::Aperture, {80, 10});
     camera.setProp(CameraProp::ShutterSpeed, {1, 1000});
     camera.setProp(CameraProp::ISO, {100, 1});
-    camera.triggerCapture();
+    camera.capture();
     std::this_thread::sleep_for(std::chrono::seconds(5));
 
     camera.disconnect();
