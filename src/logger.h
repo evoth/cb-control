@@ -32,8 +32,9 @@ class Logger {
     log(true, format, args...);
   }
 
-  static void log(Packet& packet) {
-    Buffer buff = packet.pack();
+  static void log(Packet& packet) { log(packet.pack()); }
+
+  static void log(const Buffer& buff) {
     int i = 0;
     for (auto& e : buff) {
       log(false, "%02x ", +e);
@@ -43,7 +44,7 @@ class Logger {
       if (i % 16 == 0)
         log();
     }
-    log("\n");
+    log();
   }
 };
 

@@ -5,6 +5,8 @@
 #include "event.h"
 #include "factory.h"
 
+#include <map>
+
 class CameraProxy : public Camera, public EventProxy<EventContainer> {
  public:
   void connect() override;
@@ -14,16 +16,6 @@ class CameraProxy : public Camera, public EventProxy<EventContainer> {
 
  protected:
   std::string id;
-
-  template <typename U, typename... Args>
-    requires std::derived_from<U, EventPacket>
-  void pushEvent(Args&&... args) {
-    std::unique_ptr<U> event = std::make_unique<U>(std::forward<Args>(args)...);
-    EventEmitter::pushEvent(createContainer(std::move(event)));
-  }
-
-  std::unique_ptr<EventContainer> createContainer(
-      std::unique_ptr<EventPacket> event);
 
  private:
   void sendEvent(std::unique_ptr<EventPacket> event);
@@ -39,12 +31,29 @@ class CameraWrapper : public CameraProxy {
             std::make_unique<PTPIPFactory>(clientGuid, clientName, ip, port))) {
   }
 
+  std::unique_ptr<EventContainer> popEvent() override;
+
   void receiveEvent(std::unique_ptr<EventContainer> event) override;
-  // std::unique_ptr<EventContainer> popEvent() override;
+
+ protected:
+  void updateState();
 
  private:
   std::unique_ptr<Factory<EventCamera>> cameraFactory;
   std::unique_ptr<EventCamera> camera;
+
+  std::unique_ptr<EventContainer> eventContainer;
+
+  // bool isCapturing;
+  std::map<CameraProp, CameraPropValue> props;
+
+  void pushCameraEvent(std::unique_ptr<EventPacket> event);
+
+  template <typename T, typename... Args>
+    requires std::derived_from<T, EventPacket>
+  void pushCameraEvent(Args&&... args) {
+    pushCameraEvent(std::make_unique<T>(std::forward<Args>(args)...));
+  }
 
   void handleEvent(const Buffer& event);
 };

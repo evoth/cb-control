@@ -1,13 +1,8 @@
 #include "proxy.h"
 
-std::unique_ptr<EventContainer> CameraProxy::createContainer(
-    std::unique_ptr<EventPacket> event) {
-  return std::make_unique<EventContainer>(id,
-                                          std::vector<Buffer>{event->pack()});
-}
-
 void CameraProxy::sendEvent(std::unique_ptr<EventPacket> event) {
-  receiveEvent(createContainer(std::move(event)));
+  receiveEvent(
+      std::make_unique<EventContainer>(id, std::vector<Buffer>{event->pack()}));
 }
 
 void CameraProxy::connect() {
@@ -27,7 +22,41 @@ void CameraProxy::setProp(CameraProp prop, CameraPropValue value) {
                                            value.first, value.second));
 }
 
+void CameraWrapper::updateState() {
+  if (!camera)
+    return;
+  while (std::unique_ptr<EventPacket> event = camera->popEvent()) {
+    pushCameraEvent(std::move(event));
+  }
+}
+
+void CameraWrapper::pushCameraEvent(std::unique_ptr<EventPacket> event) {
+  const Buffer eventBuffer = event->pack();
+
+  if (auto setPropEvent = EventPacket::unpackAs<SetPropEvent>(eventBuffer)) {
+    const CameraProp prop = static_cast<CameraProp>(setPropEvent->propCode);
+    const CameraPropValue value(setPropEvent->valueNumerator,
+                                setPropEvent->valueDenominator);
+
+    if (props.contains(prop) && props.at(prop) == value)
+      return;  // Omit unnecessary event
+    props[prop] = value;
+  }
+
+  if (!eventContainer)
+    eventContainer = std::make_unique<EventContainer>(id);
+  eventContainer->events.push_back(std::move(eventBuffer));
+}
+
+std::unique_ptr<EventContainer> CameraWrapper::popEvent() {
+  updateState();
+  pushEvent(std::move(eventContainer));
+  return EventProxy<EventContainer>::popEvent();
+}
+
 void CameraWrapper::handleEvent(const Buffer& event) {
+  updateState();
+  // TODO: Check state to see if action is needed
   if (auto connectEvent = EventPacket::unpackAs<ConnectEvent>(event)) {
     if (connectEvent->isConnected) {
       // Attempt to connect camera
@@ -40,17 +69,21 @@ void CameraWrapper::handleEvent(const Buffer& event) {
       if (camera)
         camera->disconnect();
       else
-        pushEvent<ConnectEvent>(false);
+        pushCameraEvent<ConnectEvent>(false);
     }
   } else if (!camera) {
     // Camera is required for other actions; push disconnect event if nullptr
-    pushEvent<ConnectEvent>(false);
+    pushCameraEvent<ConnectEvent>(false);
   } else if (EventPacket::unpackAs<CaptureEvent>(event)) {
     camera->capture();
   } else if (auto setPropEvent = EventPacket::unpackAs<SetPropEvent>(event)) {
-    camera->setProp(
-        static_cast<CameraProp>(setPropEvent->propCode),
-        {setPropEvent->valueNumerator, setPropEvent->valueDenominator});
+    const CameraProp prop = static_cast<CameraProp>(setPropEvent->propCode);
+    const CameraPropValue value(setPropEvent->valueNumerator,
+                                setPropEvent->valueDenominator);
+
+    if (props.contains(prop) && props.at(prop) == value)
+      return;  // Omit unnecessary action
+    camera->setProp(prop, value);
   }
 }
 
@@ -62,11 +95,7 @@ void CameraWrapper::receiveEvent(std::unique_ptr<EventContainer> container) {
     try {
       handleEvent(event);
     } catch (Exception& e) {
-      EventEmitter::pushEvent(createContainer(e.createEvent()));
+      pushCameraEvent(e.createEvent());
     }
   }
 }
-
-// Will process events, update state, and build container while omitting
-// redundant events
-// std::unique_ptr<EventContainer> CameraWrapper::popEvent();

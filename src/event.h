@@ -13,20 +13,17 @@ class EventEmitter {
  public:
   virtual ~EventEmitter() = default;
 
-  template <typename U, typename... Args>
-    requires std::derived_from<U, T>
-  void pushEvent(Args&&... args) {
-    std::lock_guard lock(eventsMutex);
-    events.push(std::make_unique<U>(std::forward<Args>(args)...));
-    Logger::log("New result event:");
-    Logger::log(*events.back());
-  }
-
   void pushEvent(std::unique_ptr<T> event) {
     std::lock_guard lock(eventsMutex);
     events.push(std::move(event));
     Logger::log("New result event:");
     Logger::log(*events.back());
+  }
+
+  template <typename U, typename... Args>
+    requires std::derived_from<U, T>
+  void pushEvent(Args&&... args) {
+    pushEvent(std::make_unique<U>(std::forward<Args>(args)...));
   }
 
   virtual std::unique_ptr<T> popEvent() {

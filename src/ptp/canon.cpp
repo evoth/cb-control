@@ -88,7 +88,24 @@ void CanonPTPCamera::checkEvents() {
   eventData.unpack(data);
   for (const Buffer& event : eventData.events) {
     if (auto propChanged = EOSEventPacket::unpackAs<EOSPropChanged>(event)) {
-      // TODO: Update Camera::props
+      // TODO: Figure out a good way to detect capture
+      // if (propChanged->propertyCode == EOSPropertyCode::AvailableShots) {
+      //   pushEvent<CaptureEvent>();
+      //   continue;
+      // }
+
+      std::optional<CameraProp> prop =
+          EOSProps.findKey(propChanged->propertyCode);
+      if (!prop.has_value() || !EOSPropValues.contains(prop.value()))
+        continue;
+
+      std::optional<CameraPropValue> value =
+          EOSPropValues.at(prop.value()).findValue(propChanged->propertyValue);
+      if (!value.has_value())
+        continue;
+
+      pushEvent<SetPropEvent>(static_cast<uint16_t>(prop.value()),
+                              value.value().first, value.value().second);
     }
   }
 }
@@ -97,11 +114,13 @@ void CanonPTPCamera::setProp(CameraProp prop, CameraPropValue value) {
   std::optional<uint32_t> canonProp = EOSProps.findValue(prop);
   if (!canonProp.has_value() || !EOSPropValues.contains(prop) ||
       !isPropSupported(canonProp.value()))
-    return;  // TODO: Throw exception or other (more explicit) error mode?
+    throw Exception(ExceptionContext::CameraSetProp,
+                    ExceptionType::UnsupportedProperty);
 
   std::optional<uint32_t> canonValue = EOSPropValues.at(prop).findKey(value);
   if (!canonValue.has_value())
-    return;  // TODO: Throw exception or other (more explicit) error mode?
+    throw Exception(ExceptionContext::CameraSetProp,
+                    ExceptionType::UnsupportedValue);
 
   eosSetDeviceProp(canonProp.value(), canonValue.value());
 }

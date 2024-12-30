@@ -112,10 +112,7 @@ void PTPCamera::startEventThread() {
 #endif
 
   eventThread = std::jthread([this](std::stop_token stoken) {
-    while (true) {
-      if (stoken.stop_requested())
-        return;
-
+    while (!stoken.stop_requested()) {
       try {
         if (!isTransportOpen()) {
           pushEvent<ConnectEvent>(false);

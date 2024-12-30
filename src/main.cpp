@@ -30,6 +30,13 @@ int main() {
     std::this_thread::sleep_for(std::chrono::seconds(5));
   }
 
+  std::unique_ptr<EventContainer> event = camera.popEvent();
+  Logger::log("=== Event Container ===");
+  for (const Buffer& event : event->events) {
+    Logger::log("Event: ");
+    Logger::log(event);
+  }
+
   return 0;
 }
 
