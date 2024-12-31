@@ -118,7 +118,7 @@ void PTPCamera::startEventThread() {
           pushEvent<ConnectEvent>(false);
           break;
         }
-        checkEvents();
+        getEvents();
       } catch (Exception& e) {
         pushEvent(e.createEvent());
       }

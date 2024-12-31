@@ -98,7 +98,6 @@ class PTPCamera : protected PTP, public EventCamera {
  protected:
   const VendorExtensionId vendorExtensionId;
 
-  virtual void checkEvents() = 0;
   void startEventThread();
   void stopEventThread();
 

@@ -23,6 +23,6 @@ std::unique_ptr<DeviceInfo> NikonPTPCamera::getDeviceInfo() {
   return deviceInfo;
 }
 
-void NikonPTPCamera::checkEvents() {
+void NikonPTPCamera::getEvents() {
   recv(NikonOperationCode::CheckEvents);
 }

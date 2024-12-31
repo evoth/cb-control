@@ -82,7 +82,7 @@ bool CanonPTPCamera::isEosM() {
   // TODO: Include Powershot models with similar firmware?
 }
 
-void CanonPTPCamera::checkEvents() {
+void CanonPTPCamera::getEvents() {
   Buffer data = recv(CanonOperationCode::EOSGetEvent).data;
   EOSEventData eventData;
   eventData.unpack(data);

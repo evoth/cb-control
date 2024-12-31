@@ -16,7 +16,7 @@ class NikonPTPCamera : public PTPCamera {
   void openSession() override;
   void closeSession() override;
 
-  void checkEvents() override;
+  void getEvents() override;
 
   std::unique_ptr<DeviceInfo> getDeviceInfo() override;
 };

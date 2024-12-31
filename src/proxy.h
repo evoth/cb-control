@@ -36,7 +36,7 @@ class CameraWrapper : public CameraProxy {
   void receiveEvent(std::unique_ptr<EventContainer> event) override;
 
  protected:
-  void updateState();
+  void getEvents() override;
 
  private:
   std::unique_ptr<Factory<EventCamera>> cameraFactory;

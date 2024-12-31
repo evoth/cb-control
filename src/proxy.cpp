@@ -22,7 +22,7 @@ void CameraProxy::setProp(CameraProp prop, CameraPropValue value) {
                                            value.first, value.second));
 }
 
-void CameraWrapper::updateState() {
+void CameraWrapper::getEvents() {
   if (!camera)
     return;
   while (std::unique_ptr<EventPacket> event = camera->popEvent()) {
@@ -49,13 +49,13 @@ void CameraWrapper::pushCameraEvent(std::unique_ptr<EventPacket> event) {
 }
 
 std::unique_ptr<EventContainer> CameraWrapper::popEvent() {
-  updateState();
+  getEvents();
   pushEvent(std::move(eventContainer));
   return EventProxy<EventContainer>::popEvent();
 }
 
 void CameraWrapper::handleEvent(const Buffer& event) {
-  updateState();
+  getEvents();
   // TODO: Check state to see if action is needed
   if (auto connectEvent = EventPacket::unpackAs<ConnectEvent>(event)) {
     if (connectEvent->isConnected) {

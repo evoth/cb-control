@@ -35,6 +35,9 @@ class EventEmitter {
     return result;
   }
 
+ protected:
+  virtual void getEvents() = 0;
+
  private:
   std::mutex eventsMutex;
   std::queue<std::unique_ptr<T>> events;
