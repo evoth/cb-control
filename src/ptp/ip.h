@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_PTP_IP_H
 #define CB_CONTROL_PTP_IP_H
 
-#include "../socket.h"
+#include "../tcp.h"
 #include "ptp.h"
 
 // TODO: Figure out where to catch and deal with exceptions

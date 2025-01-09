@@ -27,22 +27,6 @@ class Sendable {
   virtual void recv(T& socket, Buffer& buffer, unsigned int timeoutMs) = 0;
 };
 
-class TCPSocket : public virtual Socket {
- public:
-  virtual bool connect(const std::string& ip,
-                       int port) = 0;  // Should not throw exceptions
-  virtual bool close() = 0;            // Should not throw exceptions
-  virtual bool isConnected() = 0;      // Should not throw exceptions
-};
-
-class TCPPacket : public Packet, public Sendable<TCPSocket> {
- public:
-  virtual void send(TCPSocket& socket) override;
-  virtual void recv(TCPSocket& socket,
-                    Buffer& buffer,
-                    unsigned int timeoutMs = 10000) override;
-};
-
 #define SOCKET_BUFF_SIZE 512
 #define BUFFERED_SOCKET_ERROR -1
 

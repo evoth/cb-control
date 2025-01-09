@@ -3,7 +3,7 @@
 
 #include "exception.h"
 #include "logger.h"
-#include "socket.h"
+#include "tcp.h"
 
 #include <mutex>
 #include <queue>
@@ -94,8 +94,8 @@ class ExceptionEvent : public EventPacket {
   }
 
   ExceptionEvent(Exception& e)
-      : contextCode(static_cast<uint16_t>(e.context)),
-        typeCode(static_cast<uint16_t>(e.type)) {}
+      : ExceptionEvent(static_cast<uint16_t>(e.context),
+                       static_cast<uint16_t>(e.type)) {}
 };
 
 class ConnectEvent : public EventPacket {

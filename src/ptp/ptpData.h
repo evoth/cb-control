@@ -2,7 +2,7 @@
 #define CB_CONTROL_PTP_PTPDATA_H
 
 #include "../exception.h"
-#include "../socket.h"
+#include "../tcp.h"
 
 #include <map>
 #include <typeindex>

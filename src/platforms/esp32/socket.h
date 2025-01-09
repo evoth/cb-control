@@ -1,15 +1,15 @@
 #ifndef CB_CONTROL_ESP32_SOCKET_H
 #define CB_CONTROL_ESP32_SOCKET_H
 
-#include "../../socket.h"
+#include "../../tcp.h"
 
 #include <WiFi.h>
 #include <elapsedMillis.h>
 
 // TODO: Figure out error logging
-class ESP32Socket : public TCPSocket, BufferedSocket {
+class ESP32TCPSocket : public TCPSocket, BufferedSocket {
  public:
-  ~ESP32Socket() { client.stop(); }
+  ~ESP32TCPSocket() { client.stop(); }
 
   bool connect(const std::string& ip, int port) override {
     return client.connect(ip.c_str(), port);

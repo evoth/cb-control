@@ -1,21 +1,22 @@
 #ifndef CB_CONTROL_WINDOWS_SOCKET_H
 #define CB_CONTROL_WINDOWS_SOCKET_H
 
-#include "../../socket.h"
+#include "../../exception.h"
+#include "../../tcp.h"
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
 // TODO: Figure out error logging
-class WindowsSocket : public TCPSocket, BufferedSocket {
+class WindowsTCPSocket : public TCPSocket, BufferedSocket {
  public:
-  WindowsSocket() {
+  WindowsTCPSocket() {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
       throw Exception(ExceptionContext::TCPSocket, ExceptionType::InitFailure);
   }
 
-  ~WindowsSocket() {
+  ~WindowsTCPSocket() {
     closesocket(clientSocket);
     WSACleanup();
   }
