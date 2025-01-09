@@ -7,7 +7,7 @@
 #include <elapsedMillis.h>
 
 // TODO: Figure out error logging
-class ESP32Socket : public BufferedSocket {
+class ESP32Socket : public TCPSocket, BufferedSocket {
  public:
   ~ESP32Socket() { client.stop(); }
 
@@ -32,6 +32,9 @@ class ESP32Socket : public BufferedSocket {
   }
 
   bool wait(unsigned int timeoutMs) override {
+    if (timeoutMs == 0)
+      return client.available();
+
     elapsedMillis elapsed;
     while (elapsed < timeoutMs) {
       if (client.available())

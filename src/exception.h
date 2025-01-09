@@ -7,7 +7,7 @@
 #include <exception>
 
 enum class ExceptionContext {
-  Socket,
+  TCPSocket,
   CameraConnect,
   PTPIPConnect,
   PTPIPTransaction,

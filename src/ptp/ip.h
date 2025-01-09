@@ -7,8 +7,8 @@
 // TODO: Figure out where to catch and deal with exceptions
 class PTPIP : public PTPTransport {
  public:
-  PTPIP(std::unique_ptr<Socket> commandSocket,
-        std::unique_ptr<Socket> eventSocket,
+  PTPIP(std::unique_ptr<TCPSocket> commandSocket,
+        std::unique_ptr<TCPSocket> eventSocket,
         std::array<uint8_t, 16> clientGuid,
         std::string clientName,
         std::string ip,
@@ -20,7 +20,7 @@ class PTPIP : public PTPTransport {
         ip(ip),
         port(port) {
     if (!this->commandSocket || !this->eventSocket)
-      throw Exception(ExceptionContext::Socket, ExceptionType::IsNull);
+      throw Exception(ExceptionContext::TCPSocket, ExceptionType::IsNull);
   }
 
   virtual ~PTPIP() { close(); }
@@ -40,8 +40,8 @@ class PTPIP : public PTPTransport {
       const OperationRequestData& request) override;
 
  private:
-  std::unique_ptr<Socket> commandSocket;
-  std::unique_ptr<Socket> eventSocket;
+  std::unique_ptr<TCPSocket> commandSocket;
+  std::unique_ptr<TCPSocket> eventSocket;
   const std::array<uint8_t, 16> clientGuid;
   const std::string clientName;
   const std::string ip;

@@ -32,7 +32,9 @@ int BufferedSocket::send(const Buffer& buffer) {
   return totalSent;
 }
 
-int BufferedSocket::recv(Buffer& buffer, int length, unsigned int timeoutMs) {
+int BufferedSocket::recv(Buffer& buffer,
+                         unsigned int timeoutMs,
+                         std::optional<int> length) {
   auto now = std::chrono::steady_clock::now();
   auto endTime = now + std::chrono::milliseconds(timeoutMs);
 
@@ -42,13 +44,18 @@ int BufferedSocket::recv(Buffer& buffer, int length, unsigned int timeoutMs) {
   int totalReceived = 0;
   do {
     auto timeoutDelta = endTime - now;
+    long long timeoutDeltaMs =
+        std::chrono::duration_cast<std::chrono::milliseconds>(timeoutDelta)
+            .count();
+    if (timeoutDeltaMs < 0)
+      timeoutDeltaMs = 0;
 
-    if (!wait(
-            std::chrono::duration_cast<std::chrono::milliseconds>(timeoutDelta)
-                .count()))
+    if (!wait(timeoutDeltaMs))
       return totalReceived;
 
-    int buffBytes = length - totalReceived;
+    int buffBytes = SOCKET_BUFF_SIZE;
+    if (length.has_value())
+      buffBytes = length.value() - totalReceived;
     if (buffBytes > SOCKET_BUFF_SIZE)
       buffBytes = SOCKET_BUFF_SIZE;
 
@@ -64,7 +71,11 @@ int BufferedSocket::recv(Buffer& buffer, int length, unsigned int timeoutMs) {
 
     totalReceived += result;
     now = std::chrono::steady_clock::now();
-  } while (totalReceived < length && now < endTime);
+    // This (combined with <= in the while conditional)
+    // is evil but does exactly what I want
+    if (!length.has_value())
+      endTime = now;
+  } while (now <= endTime && totalReceived < length.value());
 
   return totalReceived;
 }

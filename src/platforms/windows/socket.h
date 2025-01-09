@@ -7,12 +7,12 @@
 #include <ws2tcpip.h>
 
 // TODO: Figure out error logging
-class WindowsSocket : public BufferedSocket {
+class WindowsSocket : public TCPSocket, BufferedSocket {
  public:
   WindowsSocket() {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-      throw Exception(ExceptionContext::Socket, ExceptionType::InitFailure);
+      throw Exception(ExceptionContext::TCPSocket, ExceptionType::InitFailure);
   }
 
   ~WindowsSocket() {
