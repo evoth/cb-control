@@ -95,7 +95,7 @@ void CameraWrapper::receiveEvent(std::unique_ptr<EventContainer> container) {
     try {
       handleEvent(event);
     } catch (Exception& e) {
-      pushCameraEvent(e.createEvent());
+      pushCameraEvent(std::make_unique<ExceptionEvent>(e));
     }
   }
 }

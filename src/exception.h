@@ -1,8 +1,6 @@
 #ifndef CB_CONTROL_EXCEPTION_H
 #define CB_CONTROL_EXCEPTION_H
 
-#include "event.h"
-
 #include <cstdio>
 #include <exception>
 
@@ -59,11 +57,6 @@ class Exception : public std::exception {
   const ExceptionType type;
 
   virtual const char* what() const noexcept override { return msg; }
-
-  std::unique_ptr<ExceptionEvent> createEvent() {
-    return std::make_unique<ExceptionEvent>(static_cast<uint16_t>(context),
-                                            static_cast<uint16_t>(type));
-  }
 
  private:
   char msg[256];

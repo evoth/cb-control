@@ -15,9 +15,8 @@ void PTPIP::open() {
 
   Buffer response;
 
-  InitCommandRequest initCmdReq(clientGuid, clientName);
-  commandSocket->sendPacket(initCmdReq);
-  commandSocket->recvPacket<IPPacket>(response, 60000);
+  InitCommandRequest(clientGuid, clientName).send(*commandSocket);
+  IPPacket().recv(*commandSocket, response, 60000);
   auto initCmdAck = IPPacket::unpackAs<InitCommandAck>(response);
 
   if (!initCmdAck) {
@@ -36,9 +35,8 @@ void PTPIP::open() {
     throw Exception(ExceptionContext::PTPIPConnect,
                     ExceptionType::ConnectFailure);
 
-  InitEventRequest initEvtReq(initCmdAck->connectionNum);
-  eventSocket->sendPacket(initEvtReq);
-  eventSocket->recvPacket<IPPacket>(response);
+  InitEventRequest(initCmdAck->connectionNum).send(*eventSocket);
+  IPPacket().recv(*eventSocket, response);
   auto initEvtAck = IPPacket::unpackAs<InitEventAck>(response);
 
   if (!initEvtAck) {
@@ -61,25 +59,22 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
   DataPhaseInfo dataPhaseInfo = (request.dataPhase && request.sending)
                                     ? DataPhaseInfo::DataOut
                                     : DataPhaseInfo::DataIn;
-  OperationRequest opReq(static_cast<uint32_t>(dataPhaseInfo),
-                         request.operationCode, request.transactionId,
-                         request.params);
-  commandSocket->sendPacket(opReq);
+  OperationRequest(static_cast<uint32_t>(dataPhaseInfo), request.operationCode,
+                   request.transactionId, request.params)
+      .send(*commandSocket);
 
   if (dataPhaseInfo == DataPhaseInfo::DataOut) {
-    StartData startData(request.transactionId, request.data.size());
-    commandSocket->sendPacket(startData);
+    StartData(request.transactionId, request.data.size()).send(*commandSocket);
 
     // TODO: Avoid copying request.data?
-    EndData endData(request.transactionId, request.data);
-    commandSocket->sendPacket(endData);
+    EndData(request.transactionId, request.data).send(*commandSocket);
   }
 
   Buffer payload;
   uint64_t totalDataLength = 0;
   while (true) {
     Buffer response;
-    commandSocket->recvPacket<IPPacket>(response);
+    IPPacket().recv(*commandSocket, response);
 
     // TODO: Validate transactionId?
     if (auto opRes = IPPacket::unpackAs<OperationResponse>(response)) {

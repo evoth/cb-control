@@ -1,7 +1,6 @@
 #ifndef CB_CONTROL_SOCKET_H
 #define CB_CONTROL_SOCKET_H
 
-#include "exception.h"
 #include "packet.h"
 
 // TODO: Use noexcept?
@@ -9,7 +8,6 @@ class Socket {
  public:
   virtual ~Socket() = default;
 
- protected:
   virtual int send(const Buffer& buffer) = 0;  // Should not throw exceptions
   // Attempts to append `length` bytes to the buffer, waiting until enough bytes
   // have accumulated or until `timeoutMs` milliseconds have passed.
@@ -21,41 +19,28 @@ class Socket {
                        std::nullopt) = 0;  // Should not throw exceptions
 };
 
+template <typename T>
+  requires std::derived_from<T, Socket>
+class Sendable {
+ public:
+  virtual void send(T& socket) = 0;
+  virtual void recv(T& socket, Buffer& buffer, unsigned int timeoutMs) = 0;
+};
+
 class TCPSocket : public virtual Socket {
  public:
   virtual bool connect(const std::string& ip,
                        int port) = 0;  // Should not throw exceptions
   virtual bool close() = 0;            // Should not throw exceptions
   virtual bool isConnected() = 0;      // Should not throw exceptions
+};
 
-  void sendPacket(Packet& packet) {
-    Buffer buffer = packet.pack();
-    if (send(buffer) < buffer.size()) {
-      close();
-      throw Exception(ExceptionContext::TCPSocket, ExceptionType::SendFailure);
-    }
-  }
-
-  template <typename T>
-    requires std::derived_from<T, Packet>
-  void recvPacket(Buffer& buffer, unsigned int timeoutMs = 10000) {
-    T lengthPacket;
-    buffer.clear();
-
-    int targetBytes = sizeof(lengthPacket.length);
-    if (recv(buffer, timeoutMs, targetBytes) < targetBytes) {
-      close();
-      throw Exception(ExceptionContext::TCPSocket, ExceptionType::TimedOut);
-    }
-
-    lengthPacket.unpack(buffer);
-
-    targetBytes = lengthPacket.length - targetBytes;
-    if (recv(buffer, timeoutMs, targetBytes) < targetBytes) {
-      close();
-      throw Exception(ExceptionContext::TCPSocket, ExceptionType::TimedOut);
-    }
-  }
+class TCPPacket : public Packet, public Sendable<TCPSocket> {
+ public:
+  virtual void send(TCPSocket& socket) override;
+  virtual void recv(TCPSocket& socket,
+                    Buffer& buffer,
+                    unsigned int timeoutMs = 10000) override;
 };
 
 #define SOCKET_BUFF_SIZE 512

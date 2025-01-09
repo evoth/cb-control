@@ -1,8 +1,9 @@
 #ifndef CB_CONTROL_EVENT_H
 #define CB_CONTROL_EVENT_H
 
+#include "exception.h"
 #include "logger.h"
-#include "packet.h"
+#include "socket.h"
 
 #include <mutex>
 #include <queue>
@@ -51,7 +52,7 @@ class EventProxy : public EventEmitter<T> {
   virtual void receiveEvent(std::unique_ptr<T> event) = 0;
 };
 
-class EventPacket : public Packet {
+class EventPacket : public TCPPacket {
  public:
   uint32_t length = 0;
   uint32_t eventCode = 0;
@@ -91,6 +92,10 @@ class ExceptionEvent : public EventPacket {
     field(this->contextCode);
     field(this->typeCode);
   }
+
+  ExceptionEvent(Exception& e)
+      : contextCode(static_cast<uint16_t>(e.context)),
+        typeCode(static_cast<uint16_t>(e.type)) {}
 };
 
 class ConnectEvent : public EventPacket {

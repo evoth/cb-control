@@ -1,6 +1,35 @@
 #include "socket.h"
+#include "exception.h"
 
 #include <chrono>
+
+void TCPPacket::send(TCPSocket& socket) {
+  Buffer buffer = pack();
+  if (socket.send(buffer) < buffer.size()) {
+    socket.close();
+    throw Exception(ExceptionContext::TCPSocket, ExceptionType::SendFailure);
+  }
+}
+
+void TCPPacket::recv(TCPSocket& socket,
+                     Buffer& buffer,
+                     unsigned int timeoutMs) {
+  buffer.clear();
+
+  int targetBytes = sizeof(uint32_t);
+  if (socket.recv(buffer, timeoutMs, targetBytes) < targetBytes) {
+    socket.close();
+    throw Exception(ExceptionContext::TCPSocket, ExceptionType::TimedOut);
+  }
+
+  unpack(buffer);
+
+  targetBytes = getLength() - targetBytes;
+  if (socket.recv(buffer, timeoutMs, targetBytes) < targetBytes) {
+    socket.close();
+    throw Exception(ExceptionContext::TCPSocket, ExceptionType::TimedOut);
+  }
+}
 
 int BufferedSocket::send(const Buffer& buffer) {
   // Send in blocks of SOCKET_BUFF_SIZE bytes

@@ -2,7 +2,7 @@
 #define CB_CONTROL_PTP_PTPDATA_H
 
 #include "../exception.h"
-#include "../packet.h"
+#include "../socket.h"
 
 #include <map>
 #include <typeindex>
@@ -117,7 +117,7 @@ class PTPString : public Packet {
   static const int MAX_CHARS = 254;
 };
 
-class PTPPacket : public Packet {
+class PTPPacket : public TCPPacket {
  public:
   using Packet::field;
 

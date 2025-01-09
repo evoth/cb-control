@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_PTP_IPDATA_H
 #define CB_CONTROL_PTP_IPDATA_H
 
-#include "../packet.h"
+#include "../socket.h"
 
 enum class DataPhaseInfo : uint32_t {
   Unknown = 0x00,
@@ -11,7 +11,7 @@ enum class DataPhaseInfo : uint32_t {
 
 /* PTP/IP Packets */
 
-class IPPacket : public Packet {
+class IPPacket : public TCPPacket {
  public:
   uint32_t length = 0;
   uint32_t packetType = 0;

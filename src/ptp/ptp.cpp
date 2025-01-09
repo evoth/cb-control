@@ -120,7 +120,7 @@ void PTPCamera::startEventThread() {
         }
         getEvents();
       } catch (Exception& e) {
-        pushEvent(e.createEvent());
+        pushEvent(std::make_unique<ExceptionEvent>(e));
       }
 
       // TODO: Make this adjustable
