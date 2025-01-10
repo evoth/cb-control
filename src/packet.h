@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-typedef std::vector<unsigned char> Buffer;
+typedef std::vector<uint8_t> Buffer;
 class Packet;
 
 // TODO: Move this somewhere else?
@@ -65,6 +65,8 @@ class Packer {
  public:
   virtual ~Packer() = default;
 
+  // TODO: Really want to make value const here and enforce const correctness
+  // where used (only reason I can't is Packet.pack() changes packet by design)
   virtual void pack(T& value, Buffer& buffer, int& offset) = 0;
   virtual void unpack(T& value,
                       const Buffer& buffer,
@@ -109,7 +111,7 @@ class Primitive : public Packer<T> {
  public:
   void pack(T& value, Buffer& buffer, int& offset) override {
     for (int i = 0; i < sizeof(T); i++) {
-      unsigned char byte = (value >> i * 8) & 0xFF;
+      uint8_t byte = (value >> i * 8) & 0xFF;
       if (offset < buffer.size())
         buffer[offset] = byte;
       else
@@ -203,6 +205,21 @@ class WideString : public Packer<std::string> {
   Primitive<uint16_t> packer;
 };
 
+class DelimitedString : public Packer<std::string> {
+ public:
+  DelimitedString(std::string delimiter = "\0") : delimiter(delimiter) {}
+
+  void pack(std::string& value, Buffer& buffer, int& offset) override;
+  void unpack(std::string& value,
+              const Buffer& buffer,
+              int& offset,
+              std::optional<int> limitOffset) override;
+
+ private:
+  std::string delimiter;
+  Primitive<char> packer;
+};
+
 // TODO: Get rid of this since Packet can be its own field?
 class NestedPacket : public Packer<Packet> {
  public:
@@ -217,7 +234,7 @@ template <typename T>
   requires std::derived_from<T, Packet>
 class PacketBuffer : public Packer<Buffer> {
  public:
-  PacketBuffer() : packer(std::make_unique<Primitive<unsigned char>>()) {}
+  PacketBuffer() : packer(std::make_unique<Primitive<uint8_t>>()) {}
 
   void pack(Buffer& value, Buffer& buffer, int& offset) override {
     packer.pack(value, buffer, offset);
@@ -238,7 +255,7 @@ class PacketBuffer : public Packer<Buffer> {
 
  private:
   T lengthPacket;
-  Vector<unsigned char> packer;
+  Vector<uint8_t> packer;
 };
 
 // TODO: The overloading on field is kind of fun but hurts readability
@@ -313,9 +330,14 @@ class Packet : public IField {
               std::make_unique<Primitive<T>>(), values);
   }
 
-  // String (encoded as 16 bits/char as in PTP)
+  // Wide string (encoded as 16 bits/char as in PTP)
   void field(std::string& value) {
     ADD_FIELD(std::string, WideString, , value);
+  }
+
+  // Delimited string
+  void field(std::string& value, std::string delimiter) {
+    ADD_FIELD(std::string, DelimitedString, delimiter, value);
   }
 
   // Nested packet (packed/unpacked in place)

@@ -31,6 +31,32 @@ void WideString::unpack(std::string& value,
   }
 }
 
+void DelimitedString::pack(std::string& value, Buffer& buffer, int& offset) {
+  for (char& c : value)
+    packer.pack(c, buffer, offset);
+  for (char& c : delimiter)
+    packer.pack(c, buffer, offset);
+}
+
+void DelimitedString::unpack(std::string& value,
+                             const Buffer& buffer,
+                             int& offset,
+                             std::optional<int> limitOffset) {
+  int limit = getUnpackLimit(buffer.size(), limitOffset);
+  char c;
+  value.clear();
+  while (offset < limit) {
+    packer.unpack(c, buffer, offset, limitOffset);
+    value.push_back(c);
+
+    int delimIndex = value.length() - delimiter.length();
+    if (delimIndex >= 0 && value.substr(delimIndex) == delimiter) {
+      value.erase(delimIndex);
+      break;
+    }
+  }
+}
+
 void NestedPacket::pack(Packet& value, Buffer& buffer, int& offset) {
   value.pack(buffer, offset);
 }

@@ -56,8 +56,8 @@ class PTP {
     if (auto devicePropDesc =
             Packet::unpackAs<DevicePropDesc<T>, DevicePropDesc<T>>(data))
       return devicePropDesc;
-    return Exception(ExceptionContext::PTPDevicePropDesc,
-                     ExceptionType::WrongType);
+    throw Exception(ExceptionContext::PTPDevicePropDesc,
+                    ExceptionType::WrongType);
   }
 
  protected:
@@ -66,7 +66,7 @@ class PTP {
 
   OperationResponseData send(uint16_t operationCode,
                              std::array<uint32_t, 5> params = {},
-                             std::vector<unsigned char> data = {});
+                             std::vector<uint8_t> data = {});
   OperationResponseData recv(uint16_t operationCode,
                              std::array<uint32_t, 5> params = {});
   OperationResponseData mesg(uint16_t operationCode,
@@ -84,7 +84,7 @@ class PTP {
                                     bool sending,
                                     uint16_t operationCode,
                                     std::array<uint32_t, 5> params = {},
-                                    std::vector<unsigned char> data = {});
+                                    std::vector<uint8_t> data = {});
 };
 
 class PTPCamera : protected PTP, public EventCamera {

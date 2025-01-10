@@ -54,7 +54,7 @@ OperationResponseData PTP::transaction(bool dataPhase,
                                        bool sending,
                                        uint16_t operationCode,
                                        std::array<uint32_t, 5> params,
-                                       std::vector<unsigned char> data) {
+                                       std::vector<uint8_t> data) {
   std::lock_guard lock(transactionMutex);
 
   if (!transport)
@@ -79,7 +79,7 @@ OperationResponseData PTP::transaction(bool dataPhase,
 // TODO: Avoid copying `data`?
 OperationResponseData PTP::send(uint16_t operationCode,
                                 std::array<uint32_t, 5> params,
-                                std::vector<unsigned char> data) {
+                                std::vector<uint8_t> data) {
   return transaction(true, true, operationCode, params, data);
 };
 

@@ -1,41 +1,22 @@
+#include "http.h"
 #include "logger.h"
-#include "proxy.h"
-
-#include <thread>
+#include "platforms/windows/socket.h"
 
 int main() {
-  const std::array<uint8_t, 16> guid(
-      {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7});
+  WindowsTCPSocket socket;
+  socket.connect("192.168.4.1", 80);
 
-  CameraWrapper camera(guid, "Tim", "192.168.4.7");
+  HTTPRequest request("GET", "/");
+  request.headers["Host"] = "192.168.4.1";
+  request.headers["Connection"] = "close";
+  request.send(socket);
 
-  for (int i = 0; i < 2; i++) {
-    Logger::log("Connecting to camera...");
-    camera.connect();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+  HTTPResponse response;
+  response.recv(socket);
 
-    camera.setProp(CameraProp::Aperture, {56, 10});
-    camera.setProp(CameraProp::ShutterSpeed, {1, 100});
-    camera.setProp(CameraProp::ISO, {400, 1});
-    camera.capture();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+  socket.close();
 
-    camera.setProp(CameraProp::Aperture, {80, 10});
-    camera.setProp(CameraProp::ShutterSpeed, {1, 1000});
-    camera.setProp(CameraProp::ISO, {100, 1});
-    camera.capture();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    camera.disconnect();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-  }
-
-  std::unique_ptr<EventContainer> event = camera.popEvent();
-  Logger::log("=== Event Container ===");
-  for (const Buffer& event : event->events) {
-    Logger::log("Event: ");
-    Logger::log(event);
-  }
+  Logger::log(response, true);
 
   return 0;
 }
@@ -43,16 +24,21 @@ int main() {
 #if defined(ESP32)
 #include <WiFi.h>
 #include <esp_pthread.h>
+#include <thread>
 
 void setup() {
   Serial.begin(115200);
   Serial.println();
 
-  Serial.print("Starting soft-AP... ");
-  WiFi.softAP("ESP32_AP", "defgecd7");
+  WiFi.mode(WIFI_STA);
+  WiFi.begin("ESP8266_AP", "defgecd7");
 
-  Serial.print("Soft-AP IP address: ");
-  Serial.println(WiFi.softAPIP());
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
+  }
+  Serial.print("\nIP address: ");
+  Serial.println(WiFi.localIP());
 
   delay(10000);
 

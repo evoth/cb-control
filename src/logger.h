@@ -32,17 +32,24 @@ class Logger {
     log(true, format, args...);
   }
 
-  static void log(Packet& packet) { log(packet.pack()); }
+  static void log(Packet& packet, bool asString = false) {
+    log(packet.pack(), asString);
+  }
 
-  static void log(const Buffer& buff) {
-    int i = 0;
-    for (auto& e : buff) {
-      log(false, "%02x ", +e);
-      i++;
-      if (i % 16 == 8)
-        log(false, " ");
-      if (i % 16 == 0)
-        log();
+  static void log(const Buffer& buff, bool asString = false) {
+    if (asString) {
+      for (auto& c : buff)
+        log(false, "%c", c);
+    } else {
+      int i = 0;
+      for (auto& c : buff) {
+        log(false, "%02x ", +c);
+        i++;
+        if (i % 16 == 8)
+          log(false, " ");
+        if (i % 16 == 0)
+          log();
+      }
     }
     log();
   }

@@ -24,6 +24,7 @@ template <typename T>
 class Sendable {
  public:
   virtual void send(T& socket) = 0;
+  // Should put received packet in buffer and unpack
   virtual void recv(T& socket, Buffer& buffer, unsigned int timeoutMs) = 0;
 };
 

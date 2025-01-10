@@ -14,15 +14,17 @@ void TCPPacket::recv(TCPSocket& socket,
                      unsigned int timeoutMs) {
   buffer.clear();
 
-  int targetBytes = sizeof(uint32_t);
-  if (socket.recv(buffer, timeoutMs, targetBytes) < targetBytes) {
-    socket.close();
-    throw Exception(ExceptionContext::TCPSocket, ExceptionType::TimedOut);
-  }
-
+  recvAttempt(socket, buffer, timeoutMs, sizeof(uint32_t));
   unpack(buffer);
 
-  targetBytes = getLength() - targetBytes;
+  recvAttempt(socket, buffer, timeoutMs, getLength() - sizeof(uint32_t));
+  unpack(buffer);
+}
+
+void TCPPacket::recvAttempt(TCPSocket& socket,
+                            Buffer& buffer,
+                            unsigned int timeoutMs,
+                            int targetBytes) {
   if (socket.recv(buffer, timeoutMs, targetBytes) < targetBytes) {
     socket.close();
     throw Exception(ExceptionContext::TCPSocket, ExceptionType::TimedOut);

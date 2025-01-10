@@ -13,10 +13,16 @@ class TCPSocket : public virtual Socket {
 
 class TCPPacket : public Packet, public Sendable<TCPSocket> {
  public:
-  void send(TCPSocket& socket) override;
-  void recv(TCPSocket& socket,
-            Buffer& buffer,
-            unsigned int timeoutMs = 10000) override;
+  virtual void send(TCPSocket& socket) override;
+  virtual void recv(TCPSocket& socket,
+                    Buffer& buffer,
+                    unsigned int timeoutMs = 10000) override;
+
+ private:
+  void recvAttempt(TCPSocket& socket,
+                   Buffer& buffer,
+                   unsigned int timeoutMs,
+                   int targetBytes);
 };
 
 #endif

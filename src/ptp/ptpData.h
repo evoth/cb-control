@@ -2,52 +2,11 @@
 #define CB_CONTROL_PTP_PTPDATA_H
 
 #include "../exception.h"
-#include "../tcp.h"
+#include "../packet.h"
 
 #include <map>
 #include <typeindex>
 #include <typeinfo>
-
-// TODO: Figure out where to catch and deal with exceptions (probably within
-// PTP class)
-
-// class PTPException : public std::exception {
-//  public:
-//   template <typename... Args>
-//   PTPException(const char* format, Args... args) {
-//     snprintf(msg, sizeof(msg), format, args...);
-//   }
-
-//   virtual ~PTPException() = default;
-
-//   virtual const char* what() const noexcept override { return msg; }
-
-//  private:
-//   char msg[256];
-// };
-
-// class PTPOperationException : public PTPException {
-//  public:
-//   const int errorCode;
-
-//   PTPOperationException(uint32_t responseCode)
-//       : PTPException("PTP Operation Error: 0x%04x", responseCode),
-//         errorCode(responseCode) {}
-// };
-
-// class PTPTransportException : public PTPException {
-//  public:
-//   template <typename... Args>
-//   PTPTransportException(const char* format, Args... args)
-//       : PTPException(format, args...) {}
-// };
-
-// class PTPCameraException : public PTPException {
-//  public:
-//   template <typename... Args>
-//   PTPCameraException(const char* format, Args... args)
-//       : PTPException(format, args...) {}
-// };
 
 struct OperationRequestData {
   const bool dataPhase;
@@ -56,7 +15,7 @@ struct OperationRequestData {
   const uint32_t sessionId;
   const uint32_t transactionId;
   const std::array<uint32_t, 5> params;
-  const std::vector<unsigned char> data;
+  const std::vector<uint8_t> data;
 
   OperationRequestData(bool dataPhase,
                        bool sending,
@@ -64,7 +23,7 @@ struct OperationRequestData {
                        uint32_t sessionId,
                        uint32_t transactionId,
                        std::array<uint32_t, 5> params = {},
-                       std::vector<unsigned char> data = {})
+                       std::vector<uint8_t> data = {})
       : dataPhase(dataPhase),
         sending(sending),
         operationCode(operationCode),
@@ -77,11 +36,11 @@ struct OperationRequestData {
 struct OperationResponseData {
   const uint16_t responseCode;
   const std::array<uint32_t, 5> params;
-  const std::vector<unsigned char> data;
+  const std::vector<uint8_t> data;
 
   OperationResponseData(uint16_t responseCode,
                         std::array<uint32_t, 5> params = {},
-                        std::vector<unsigned char> data = {})
+                        std::vector<uint8_t> data = {})
       : responseCode(responseCode), params(params), data(std::move(data)) {}
 };
 
@@ -117,7 +76,7 @@ class PTPString : public Packet {
   static const int MAX_CHARS = 254;
 };
 
-class PTPPacket : public TCPPacket {
+class PTPPacket : public Packet {
  public:
   using Packet::field;
 
