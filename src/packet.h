@@ -56,6 +56,8 @@ class SpecialProp {
     prop = std::make_unique<SpecialPropRef<T, U>>(ref);
   }
 
+  bool isBound() { return prop != nullptr; }
+
  private:
   std::unique_ptr<ISpecialPropRef<T>> prop;
 };
@@ -139,10 +141,9 @@ class Primitive : public Packer<T> {
 template <typename T, std::unsigned_integral U = uint32_t>
 class Vector : public Packer<std::vector<T>> {
  public:
-  Vector(std::unique_ptr<Packer<T>> packer)
-      : packer(std::move(packer)), greedy(true) {}
+  Vector(std::unique_ptr<Packer<T>> packer) : packer(std::move(packer)) {}
   Vector(std::unique_ptr<Packer<T>> packer, U& lengthRef)
-      : packer(std::move(packer)), greedy(false) {
+      : packer(std::move(packer)) {
     _length.bind(lengthRef);
   }
 
@@ -159,7 +160,8 @@ class Vector : public Packer<std::vector<T>> {
               std::optional<int> limitOffset) override {
     int limit = getUnpackLimit(buffer.size(), limitOffset);
     values.clear();
-    for (int i = 0; offset < limit && (greedy || i < _length.get()); i++) {
+    for (int i = 0; offset < limit && (!_length.isBound() || i < _length.get());
+         i++) {
       values.push_back(T());
       packer->unpack(values.back(), buffer, offset, limitOffset);
     }
@@ -168,7 +170,6 @@ class Vector : public Packer<std::vector<T>> {
  private:
   std::unique_ptr<Packer<T>> packer;
   SpecialProp<U> _length;
-  const bool greedy;
 };
 
 template <typename T, size_t N>

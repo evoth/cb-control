@@ -73,11 +73,13 @@ void Packet::pack(Buffer& buffer, int& offset) {
   for (std::unique_ptr<IField>& field : fields)
     field->pack(buffer, offset);
 
-  _length.set(offset - startOffset);
+  if (_length.isBound()) {
+    _length.set(offset - startOffset);
 
-  offset = startOffset;
-  for (std::unique_ptr<IField>& field : fields)
-    field->pack(buffer, offset);
+    offset = startOffset;
+    for (std::unique_ptr<IField>& field : fields)
+      field->pack(buffer, offset);
+  }
 };
 
 void Packet::unpack(const Buffer& buffer,

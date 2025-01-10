@@ -35,6 +35,11 @@ int BufferedSocket::send(const Buffer& buffer) {
 int BufferedSocket::recv(Buffer& buffer,
                          unsigned int timeoutMs,
                          std::optional<int> length) {
+  // This might be premature optimization, but it should reduce heap
+  // fragmentation for large packets
+  if (length.has_value())
+    buffer.reserve(buffer.size() + length.value());
+
   auto now = std::chrono::steady_clock::now();
   auto endTime = now + std::chrono::milliseconds(timeoutMs);
 
@@ -72,7 +77,7 @@ int BufferedSocket::recv(Buffer& buffer,
     totalReceived += result;
     now = std::chrono::steady_clock::now();
     // This (combined with <= in the while conditional)
-    // is evil but does exactly what I want
+    // is Evil but does exactly what I want
     if (!length.has_value())
       endTime = now;
   } while (now <= endTime && totalReceived < length.value());
