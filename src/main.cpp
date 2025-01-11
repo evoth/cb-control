@@ -57,12 +57,17 @@ int main() {
   Logger::log(doc, true);
   Logger::log();
 
-  std::string friendlyName = doc["device"]["friendlyName"];
-  std::string manufacturer = doc["device"]["manufacturer"];
-  std::string modelName = doc["device"]["modelName"];
-  std::string serialNumber = doc["device"]["serialNumber"];
+  XMLElement& device = doc["device"];
+
+  std::string friendlyName = device["friendlyName"];
+  std::string nickname =
+      device["serviceList"]["service"]["ns:X_deviceNickname"];
+  std::string manufacturer = device["manufacturer"];
+  std::string modelName = device["modelName"];
+  std::string serialNumber = device["serialNumber"];
 
   Logger::log("Friendly name: %s", friendlyName.c_str());
+  Logger::log("Nickname: %s", nickname.c_str());
   Logger::log("Manufacturer: %s", manufacturer.c_str());
   Logger::log("Model name: %s", modelName.c_str());
   Logger::log("Serial number: %s", serialNumber.c_str());
