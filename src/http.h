@@ -12,8 +12,8 @@ class HTTPMessage : public Packet, public Sendable<TCPSocket> {
   Buffer body;
 
   HTTPMessage()
-      : headerNamePacker(": "),
-        headerValuePacker("\r\n"),
+      : headerNamePacker({}, {": ", "\r\n"}),
+        headerValuePacker({}, {"\r\n"}),
         bodyField(std::make_unique<Vector<uint8_t, uint32_t>>(
                       std::make_unique<Primitive<uint8_t>>(),
                       contentLength),
@@ -22,10 +22,10 @@ class HTTPMessage : public Packet, public Sendable<TCPSocket> {
   using Packet::pack;
   using Packet::unpack;
 
-  virtual void pack(Buffer& buffer, int& offset) override;
-  virtual void unpack(const Buffer& buffer,
-                      int& offset,
-                      std::optional<int> limitOffset) override;
+  void pack(Buffer& buffer, int& offset) override;
+  void unpack(const Buffer& buffer,
+              int& offset,
+              std::optional<int> limitOffset) override;
 
   void send(TCPSocket& socket) override;
   void recv(TCPSocket& socket,
@@ -57,9 +57,9 @@ class HTTPRequest : public HTTPMessage {
 
   HTTPRequest(std::string method = "", std::string target = "")
       : method(method), target(target) {
-    field(this->method, " ");
-    field(this->target, " ");
-    field(this->httpVersion, "\r\n");
+    field(this->method, {}, {" "});
+    field(this->target, {}, {" "});
+    field(this->httpVersion, {}, {"\r\n"});
   }
 };
 
@@ -70,9 +70,9 @@ class HTTPResponse : public HTTPMessage {
 
   HTTPResponse(std::string statusCode = "", std::string statusText = "")
       : statusCode(statusCode), statusText(statusText) {
-    field(this->httpVersion, " ");
-    field(this->statusCode, " ");
-    field(this->statusText, "\r\n");
+    field(this->httpVersion, {}, {" "});
+    field(this->statusCode, {}, {" "});
+    field(this->statusText, {}, {"\r\n"});
   }
 };
 

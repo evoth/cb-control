@@ -208,7 +208,16 @@ class WideString : public Packer<std::string> {
 
 class DelimitedString : public Packer<std::string> {
  public:
-  DelimitedString(std::string delimiter = "\0") : delimiter(delimiter) {}
+  DelimitedString(std::vector<std::string> start = {},
+                  std::vector<std::string> end = {"\0"},
+                  std::string trimChars = "",
+                  bool packTrim = false,
+                  bool keepEnd = false)
+      : start(start),
+        end(end),
+        trimChars(trimChars),
+        packTrim(packTrim),
+        keepEnd(keepEnd) {}
 
   void pack(std::string& value, Buffer& buffer, int& offset) override;
   void unpack(std::string& value,
@@ -217,7 +226,11 @@ class DelimitedString : public Packer<std::string> {
               std::optional<int> limitOffset) override;
 
  private:
-  std::string delimiter;
+  std::vector<std::string> start;
+  std::vector<std::string> end;
+  std::string trimChars;
+  bool packTrim = false;
+  bool keepEnd = false;
   Primitive<char> packer;
 };
 
@@ -337,8 +350,16 @@ class Packet : public IField {
   }
 
   // Delimited string
-  void field(std::string& value, std::string delimiter) {
-    ADD_FIELD(std::string, DelimitedString, delimiter, value);
+  void field(std::string& value,
+             std::vector<std::string> start,
+             std::vector<std::string> end,
+             std::string trimChars = "",
+             bool packTrim = false,
+             bool keepEnd = false) {
+    ADD_FIELD(std::string, DelimitedString,
+              start COMMA() end COMMA() trimChars COMMA() packTrim COMMA()
+                  keepEnd,
+              value);
   }
 
   // Nested packet (packed/unpacked in place)

@@ -32,14 +32,10 @@ void HTTPMessage::unpack(const Buffer& buffer,
   int limit = getUnpackLimit(buffer.size(), limitOffset);
   headers.clear();
   while (offset < limit) {
-    if (offset + 1 < limit && buffer[offset] == '\r' &&
-        buffer[offset + 1] == '\n') {
-      offset += 2;
-      break;
-    }
-
     std::string name, value;
     headerNamePacker.unpack(name, buffer, offset, limitOffset);
+    if (name.empty())
+      break;
     headerValuePacker.unpack(value, buffer, offset, limitOffset);
     headers[name] = value;
   }

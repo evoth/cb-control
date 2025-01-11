@@ -12,7 +12,8 @@ enum class ExceptionContext {
   PTPTransport,
   PTPDevicePropDesc,
   Factory,
-  CameraSetProp
+  CameraSetProp,
+  XML,
 };
 
 enum class ExceptionType {
@@ -32,6 +33,7 @@ enum class ExceptionType {
   UnsupportedTransport,
   UnsupportedProperty,
   UnsupportedValue,
+  TagNotFound,
 };
 
 class Exception : public std::exception {

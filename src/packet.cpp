@@ -1,5 +1,7 @@
 #include "packet.h"
 
+#include <iterator>
+
 int getUnpackLimit(int hardLimit, std::optional<int> limitOffset) {
   if (limitOffset.has_value() && limitOffset.value() < hardLimit)
     hardLimit = limitOffset.value();
@@ -25,17 +27,23 @@ void WideString::unpack(std::string& value,
   value.clear();
   while (offset < limit) {
     packer.unpack(wideChar, buffer, offset, limitOffset);
-    if (!wideChar)
+    if (wideChar == '\0')
       break;
     value.push_back(wideChar);
   }
 }
 
 void DelimitedString::pack(std::string& value, Buffer& buffer, int& offset) {
+  if (!start.empty())
+    for (char& c : start[0])
+      packer.pack(c, buffer, offset);
   for (char& c : value)
     packer.pack(c, buffer, offset);
-  for (char& c : delimiter)
-    packer.pack(c, buffer, offset);
+  if (!end.empty())
+    for (char& c : end[0])
+      packer.pack(c, buffer, offset);
+  if (!trimChars.empty() && packTrim)
+    packer.pack(trimChars[0], buffer, offset);
 }
 
 void DelimitedString::unpack(std::string& value,
@@ -45,16 +53,78 @@ void DelimitedString::unpack(std::string& value,
   int limit = getUnpackLimit(buffer.size(), limitOffset);
   char c;
   value.clear();
-  while (offset < limit) {
+
+  // TODO: Use unpack here instead of raw access
+  while (offset < limit && trimChars.find(buffer[offset]) != std::string::npos)
+    offset++;
+
+  if (!start.empty()) {
+    int startOffset = offset;
+    std::string startTest;
+    bool foundStart = false;
+    bool testedAll = false;
+    // Keep adding characters until we have exhausted all start options
+    while (offset < limit && !testedAll) {
+      testedAll = true;
+      for (std::string& s : start) {
+        if (startTest.length() < s.length())
+          testedAll = false;
+        if (startTest == s) {
+          foundStart = true;
+          break;
+        }
+      }
+      if (foundStart)
+        break;
+
+      packer.unpack(c, buffer, offset, limitOffset);
+      // We also trim characters within start string
+      if (trimChars.find(c) == std::string::npos)
+        startTest.push_back(c);
+    }
+    if (!foundStart) {
+      offset = startOffset;
+      return;
+    }
+  }
+
+  bool foundEnd = false;
+  while (offset < limit && !foundEnd) {
     packer.unpack(c, buffer, offset, limitOffset);
     value.push_back(c);
 
-    int delimIndex = value.length() - delimiter.length();
-    if (delimIndex >= 0 && value.substr(delimIndex) == delimiter) {
-      value.erase(delimIndex);
-      break;
+    for (std::string& e : end) {
+      auto valueIt = value.rbegin();
+      auto eIt = e.rbegin();
+
+      // Check equivalence of endings sans trimmed characters
+      while (valueIt != value.rend() && eIt != e.rend()) {
+        if (*valueIt != *eIt && trimChars.find(*valueIt) != std::string::npos) {
+          valueIt++;
+          continue;
+        }
+        if (*valueIt != *eIt)
+          break;
+        valueIt++;
+        eIt++;
+      }
+
+      if (eIt == e.rend()) {
+        foundEnd = true;
+        if (!keepEnd) {
+          while (valueIt != value.rend() &&
+                 trimChars.find(*valueIt) != std::string::npos)
+            valueIt++;
+          value.erase(value.size() - std::distance(value.rbegin(), valueIt));
+        }
+        break;
+      }
     }
   }
+
+  // TODO: Use unpack here instead of raw access
+  while (offset < limit && trimChars.find(buffer[offset]) != std::string::npos)
+    offset++;
 }
 
 void NestedPacket::pack(Packet& value, Buffer& buffer, int& offset) {
