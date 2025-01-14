@@ -17,23 +17,21 @@ class Socket {
                    unsigned int timeoutMs = 0,
                    std::optional<int> length =
                        std::nullopt) = 0;  // Should not throw exceptions
+
+  virtual bool close() = 0;  // Should not throw exceptions
+
+  // TODO: Make these the main send/recv functions? But those are virtual?
+  int sendAttempt(Buffer& buffer);
+  int recvAttempt(Buffer& buffer, unsigned int timeoutMs, int targetBytes);
 };
 
-template <typename T>
-  requires std::derived_from<T, Socket>
-class Sendable {
- public:
-  virtual void send(T& socket) = 0;
-  // Should put received packet in buffer and unpack
-  virtual void recv(T& socket, Buffer& buffer, unsigned int timeoutMs) = 0;
-};
-
-#define SOCKET_BUFF_SIZE 512
 #define BUFFERED_SOCKET_ERROR -1
 
 class BufferedSocket : public virtual Socket {
  public:
-  virtual ~BufferedSocket() = default;
+  BufferedSocket(int buffLen = 1024)
+      : buffLen(buffLen), buff(new char[buffLen]) {}
+  virtual ~BufferedSocket() { delete[] buff; }
 
  protected:
   int send(const Buffer& buffer) override;
@@ -49,7 +47,17 @@ class BufferedSocket : public virtual Socket {
   virtual bool wait(unsigned int timeoutMs) = 0;
 
  private:
-  char buff[SOCKET_BUFF_SIZE];
+  int buffLen = 0;
+  char* buff;
+};
+
+template <typename T>
+  requires std::derived_from<T, Socket>
+class Sendable {
+ public:
+  virtual int send(T& socket) = 0;
+  // Should put received packet in buffer and unpack
+  virtual int recv(T& socket, Buffer& buffer, unsigned int timeoutMs) = 0;
 };
 
 #endif

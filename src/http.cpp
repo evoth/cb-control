@@ -48,44 +48,49 @@ void HTTPMessage::unpack(const Buffer& buffer,
   }
 }
 
-void HTTPMessage::send(TCPSocket& socket) {
+int HTTPMessage::send(TCPSocket& socket) {
   Buffer buffer = pack();
-  if (socket.send(buffer) < buffer.size()) {
-    socket.close();
-    throw Exception(ExceptionContext::TCPSocket, ExceptionType::SendFailure);
-  }
+  return socket.sendAttempt(buffer);
 }
 
-void HTTPMessage::recvAttempt(TCPSocket& socket,
-                              Buffer& buffer,
-                              unsigned int timeoutMs,
-                              int targetBytes) {
-  if (socket.recv(buffer, timeoutMs, targetBytes) < targetBytes) {
-    socket.close();
-    throw Exception(ExceptionContext::TCPSocket, ExceptionType::TimedOut);
-  }
-}
-
-void HTTPMessage::recv(TCPSocket& socket,
-                       Buffer& buffer,
-                       unsigned int timeoutMs) {
+int HTTPMessage::recv(TCPSocket& socket,
+                      Buffer& buffer,
+                      unsigned int timeoutMs) {
   buffer.clear();
 
   const Buffer headerDelim = {'\r', '\n', '\r', '\n'};
 
-  recvAttempt(socket, buffer, timeoutMs, headerDelim.size());
-  if (buffer.size() < headerDelim.size())
-    return;
+  socket.recvAttempt(buffer, timeoutMs, headerDelim.size());
+  if (buffer.size() < headerDelim.size()) {
+    buffer.clear();
+    return 0;
+  }
 
   // Receive one byte at a time until end of header block
   while (!std::equal(buffer.end() - headerDelim.size(), buffer.end(),
                      headerDelim.begin())) {
-    recvAttempt(socket, buffer, timeoutMs, 1);
+    socket.recvAttempt(buffer, timeoutMs, 1);
   }
   unpack(buffer);
 
   if (contentLength > 0) {
-    recvAttempt(socket, buffer, timeoutMs, contentLength);
+    socket.recvAttempt(buffer, timeoutMs, contentLength);
     unpack(buffer);
   }
+
+  return buffer.size();
+}
+
+int HTTPMessage::send(UDPMulticastSocket& socket) {
+  Buffer buffer = pack();
+  return socket.sendAttempt(buffer);
+}
+
+int HTTPMessage::recv(UDPMulticastSocket& socket,
+                      Buffer& buffer,
+                      unsigned int timeoutMs) {
+  buffer.clear();
+  socket.recv(buffer, timeoutMs);
+  unpack(buffer);
+  return buffer.size();
 }

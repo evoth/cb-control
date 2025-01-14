@@ -1,20 +1,38 @@
 #include "socket.h"
+#include "exception.h"
 
 #include <chrono>
 
+int Socket::sendAttempt(Buffer& buffer) {
+  int result = send(buffer);
+  if (result < buffer.size()) {
+    close();
+    throw Exception(ExceptionContext::Socket, ExceptionType::SendFailure);
+  }
+  return result;
+}
+
+int Socket::recvAttempt(Buffer& buffer,
+                        unsigned int timeoutMs,
+                        int targetBytes) {
+  int result = recv(buffer, timeoutMs, targetBytes);
+  if (result < targetBytes) {
+    close();
+    throw Exception(ExceptionContext::Socket, ExceptionType::TimedOut);
+  }
+  return result;
+}
+
 int BufferedSocket::send(const Buffer& buffer) {
-  // Send in blocks of SOCKET_BUFF_SIZE bytes
   int totalSent = 0;
   while (totalSent < buffer.size()) {
-    // Read block from `buffer` (byte vector) into `buff` (char array)
-    int buffBytes = 0;
-    while (buffBytes < SOCKET_BUFF_SIZE &&
-           totalSent + buffBytes < buffer.size()) {
-      buff[buffBytes] = buffer[totalSent + buffBytes];
-      buffBytes++;
-    }
+    int buffBytes = buffer.size() - totalSent;
+    if (buffBytes > buffLen)
+      buffBytes = buffLen;
 
-    // Repeatedly send() until current block has been fully sent
+    std::vector<uint8_t>::const_iterator begin = buffer.begin() + totalSent;
+    std::copy(begin, begin + buffBytes, buff);
+
     int sentBytes = 0;
     while (sentBytes < buffBytes) {
       int result = send(buff + sentBytes, buffBytes - sentBytes);
@@ -58,11 +76,11 @@ int BufferedSocket::recv(Buffer& buffer,
     if (!wait(timeoutDeltaMs))
       return totalReceived;
 
-    int buffBytes = SOCKET_BUFF_SIZE;
+    int buffBytes = buffLen;
     if (length.has_value())
       buffBytes = length.value() - totalReceived;
-    if (buffBytes > SOCKET_BUFF_SIZE)
-      buffBytes = SOCKET_BUFF_SIZE;
+    if (buffBytes > buffLen)
+      buffBytes = buffLen;
 
     int result = recv(buff, buffBytes);
 
@@ -70,17 +88,12 @@ int BufferedSocket::recv(Buffer& buffer,
     if (result == BUFFERED_SOCKET_ERROR)
       return totalReceived;
 
-    for (int i = 0; i < result; i++) {
-      buffer.push_back(buff[i]);
-    }
+    buffer.insert(buffer.end(), buff, buff + result);
 
     totalReceived += result;
     now = std::chrono::steady_clock::now();
-    // This (combined with <= in the while conditional)
-    // is Evil but does exactly what I want
-    if (!length.has_value())
-      endTime = now;
-  } while (now <= endTime && totalReceived < length.value());
+  } while (now < endTime &&
+           (!length.has_value() || totalReceived < length.value()));
 
   return totalReceived;
 }

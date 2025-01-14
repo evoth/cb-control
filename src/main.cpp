@@ -1,38 +1,22 @@
+#include "http.h"
 #include "logger.h"
-#include "proxy.h"
+#include "platforms/windows/socket.h"
+
+#include <thread>
 
 int main() {
-  const std::array<uint8_t, 16> guid(
-      {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7});
+  WindowsUDPMulticastSocket socket;
+  socket.begin("239.255.255.250", 1900);
 
-  CameraWrapper camera(guid, "Tim", "192.168.4.7");
+  HTTPRequest req;
+  std::string addr;
 
-  for (int i = 0; i < 2; i++) {
-    Logger::log("Connecting to camera...");
-    camera.connect();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    camera.setProp(CameraProp::Aperture, {56, 10});
-    camera.setProp(CameraProp::ShutterSpeed, {1, 100});
-    camera.setProp(CameraProp::ISO, {400, 1});
-    camera.capture();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    camera.setProp(CameraProp::Aperture, {80, 10});
-    camera.setProp(CameraProp::ShutterSpeed, {1, 1000});
-    camera.setProp(CameraProp::ISO, {100, 1});
-    camera.capture();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    camera.disconnect();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-  }
-
-  std::unique_ptr<EventContainer> event = camera.popEvent();
-  Logger::log("=== Event Container ===");
-  for (const Buffer& event : event->events) {
-    Logger::log("Event: ");
-    Logger::log(event);
+  while (true) {
+    if (req.recv(socket, 0)) {
+      addr = socket.getRemoteIp();
+      Logger::log("Received from %s:", addr.c_str());
+      Logger::log(req, true);
+    }
   }
 
   return 0;

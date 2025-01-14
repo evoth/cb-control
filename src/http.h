@@ -2,10 +2,13 @@
 #define CB_CONTROL_HTTP_H
 
 #include "tcp.h"
+#include "udp.h"
 
 #include <map>
 
-class HTTPMessage : public Packet, public Sendable<TCPSocket> {
+class HTTPMessage : public Packet,
+                    public Sendable<TCPSocket>,
+                    public Sendable<UDPMulticastSocket> {
  public:
   std::string httpVersion = "HTTP/1.1";
   std::map<std::string, std::string> headers;
@@ -27,13 +30,22 @@ class HTTPMessage : public Packet, public Sendable<TCPSocket> {
               int& offset,
               std::optional<int> limitOffset) override;
 
-  void send(TCPSocket& socket) override;
-  void recv(TCPSocket& socket,
-            Buffer& buffer,
-            unsigned int timeoutMs = 10000) override;
-  void recv(TCPSocket& socket, unsigned int timeoutMs = 10000) {
+  int send(TCPSocket& socket) override;
+  int recv(TCPSocket& socket,
+           Buffer& buffer,
+           unsigned int timeoutMs = 10000) override;
+  int recv(TCPSocket& socket, unsigned int timeoutMs = 10000) {
     Buffer buffer;
-    recv(socket, buffer, timeoutMs);
+    return recv(socket, buffer, timeoutMs);
+  }
+
+  int send(UDPMulticastSocket& socket) override;
+  int recv(UDPMulticastSocket& socket,
+           Buffer& buffer,
+           unsigned int timeoutMs = 10000) override;
+  int recv(UDPMulticastSocket& socket, unsigned int timeoutMs = 10000) {
+    Buffer buffer;
+    return recv(socket, buffer, timeoutMs);
   }
 
  private:
@@ -43,11 +55,6 @@ class HTTPMessage : public Packet, public Sendable<TCPSocket> {
   DelimitedString headerNamePacker;
   DelimitedString headerValuePacker;
   Field<Buffer> bodyField;
-
-  void recvAttempt(TCPSocket& socket,
-                   Buffer& buffer,
-                   unsigned int timeoutMs,
-                   int targetBytes);
 };
 
 class HTTPRequest : public HTTPMessage {

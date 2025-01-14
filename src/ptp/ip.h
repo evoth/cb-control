@@ -20,7 +20,7 @@ class PTPIP : public PTPTransport {
         ip(ip),
         port(port) {
     if (!this->commandSocket || !this->eventSocket)
-      throw Exception(ExceptionContext::TCPSocket, ExceptionType::IsNull);
+      throw Exception(ExceptionContext::Socket, ExceptionType::IsNull);
   }
 
   virtual ~PTPIP() { close(); }
