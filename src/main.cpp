@@ -1,76 +1,39 @@
 #include "logger.h"
-#include "xml.h"
+#include "proxy.h"
 
 int main() {
-  std::string testDocument =
-      "<?xml version=\"1.0\"?>\r\n"
-      "<root xmlns=\"urn:schemas-upnp-org:device-1-0\">\r\n"
-      "<specVersion>\r\n"
-      "<major>1</major>\r\n"
-      "<minor>0</minor>\r\n"
-      "</specVersion>\r\n"
-      "<URLBase>http://192.168.4.7:49152/upnp/</URLBase>\r\n"
-      "<device>\r\n"
-      "<deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>\r\n"
-      "<friendlyName>Canon EOS Rebel T6</friendlyName>\r\n"
-      "<manufacturer>Canon</manufacturer>\r\n"
-      "<manufacturerURL>http://www.canon.com/</manufacturerURL>\r\n"
-      "<modelDescription>Canon Digital Camera</modelDescription>\r\n"
-      "<modelName>Canon EOS Rebel T6</modelName>\r\n"
-      "<serialNumber>123456789012</serialNumber>\r\n"
-      "<UDN>uuid:00000000-0000-0000-0001-F4A99DEF7ECD</UDN>\r\n"
-      "<serviceList>\r\n"
-      "<service>\r\n"
-      "<serviceType>urn:schemas-canon-com:service:ICPO-\r\n"
-      "SmartPhoneEOSSystemService:1</serviceType>\r\n"
-      "<serviceId>urn:schemas-canon-com:serviceId:ICPO-\r\n"
-      "SmartPhoneEOSSystemService-1</serviceId>\r\n"
-      "<SCPDURL>CameraSvcDesc.xml</SCPDURL>\r\n"
-      "<controlURL>control/CanonCamera/</controlURL>\r\n"
-      "<eventSubURL></eventSubURL>\r\n"
-      "<ns:X_targetId \r\n"
-      "xmlns:ns=\"urn:schemas-canon-com:schema-upnp\">uuid:79621526-2AB6-A74E-"
-      "\r\n"
-      "9879-3C7C0A6C528F</ns:X_targetId>\r\n"
-      "<ns:X_onService \r\n"
-      "xmlns:ns=\"urn:schemas-canon-com:schema-upnp\">0</ns:X_onService>\r\n"
-      "<ns:X_deviceUsbId \r\n"
-      "xmlns:ns=\"urn:schemas-canon-com:schema-upnp\">32b4</"
-      "ns:X_deviceUsbId>\r\n"
-      "<ns:X_deviceNickname \r\n"
-      "xmlns:ns=\"urn:schemas-canon-com:schema-upnp\">EV0314</\r\n"
-      "ns:X_deviceNickname>\r\n"
-      "</service>\r\n"
-      "</serviceList>\r\n"
-      "<presentationURL>/</presentationURL>\r\n"
-      "</device>\r\n"
-      "</root>\r\n";
+  const std::array<uint8_t, 16> guid(
+      {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7});
 
-  Buffer buffer;
-  for (char& c : testDocument) {
-    buffer.push_back(c);
+  CameraWrapper camera(guid, "Tim", "192.168.4.7");
+
+  for (int i = 0; i < 2; i++) {
+    Logger::log("Connecting to camera...");
+    camera.connect();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+
+    camera.setProp(CameraProp::Aperture, {56, 10});
+    camera.setProp(CameraProp::ShutterSpeed, {1, 100});
+    camera.setProp(CameraProp::ISO, {400, 1});
+    camera.capture();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    camera.setProp(CameraProp::Aperture, {80, 10});
+    camera.setProp(CameraProp::ShutterSpeed, {1, 1000});
+    camera.setProp(CameraProp::ISO, {100, 1});
+    camera.capture();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+
+    camera.disconnect();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
   }
 
-  XMLDocument doc;
-  doc.unpack(buffer);
-
-  Logger::log(doc, true);
-  Logger::log();
-
-  XMLElement& device = doc["device"];
-
-  std::string friendlyName = device["friendlyName"];
-  std::string nickname =
-      device["serviceList"]["service"]["ns:X_deviceNickname"];
-  std::string manufacturer = device["manufacturer"];
-  std::string modelName = device["modelName"];
-  std::string serialNumber = device["serialNumber"];
-
-  Logger::log("Friendly name: %s", friendlyName.c_str());
-  Logger::log("Nickname: %s", nickname.c_str());
-  Logger::log("Manufacturer: %s", manufacturer.c_str());
-  Logger::log("Model name: %s", modelName.c_str());
-  Logger::log("Serial number: %s", serialNumber.c_str());
+  std::unique_ptr<EventContainer> event = camera.popEvent();
+  Logger::log("=== Event Container ===");
+  for (const Buffer& event : event->events) {
+    Logger::log("Event: ");
+    Logger::log(event);
+  }
 
   return 0;
 }
@@ -78,7 +41,6 @@ int main() {
 #if defined(ESP32)
 #include <WiFi.h>
 #include <esp_pthread.h>
-#include <thread>
 
 void setup() {
   Serial.begin(115200);

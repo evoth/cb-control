@@ -44,7 +44,8 @@ void CameraWrapper::pushCameraEvent(std::unique_ptr<EventPacket> event) {
   }
 
   if (!eventContainer)
-    eventContainer = std::make_unique<EventContainer>(id);
+    eventContainer =
+        std::make_unique<EventContainer>(id, std::vector<Buffer>{});
   eventContainer->events.push_back(std::move(eventBuffer));
 }
 

@@ -30,12 +30,13 @@ class EOSDeviceProp : public PTPPacket {
   uint32_t devicePropertyCode = 0;
   T value = 0;
 
-  EOSDeviceProp(uint32_t devicePropertyCode = 0, T value = 0)
+  EOSDeviceProp(uint32_t devicePropertyCode, T value)
       : devicePropertyCode(devicePropertyCode), value(value) {
     lengthField(this->length);
     typeField(this->devicePropertyCode);
     field(this->value);
   }
+  EOSDeviceProp() : EOSDeviceProp(0, 0) {}
 };
 
 class EOSEventPacket : public Packet {
@@ -43,10 +44,11 @@ class EOSEventPacket : public Packet {
   uint32_t length = 0;
   uint32_t eventType = 0;
 
-  EOSEventPacket(uint32_t eventType = 0) : eventType(eventType) {
+  EOSEventPacket(uint32_t eventType) : eventType(eventType) {
     lengthField(this->length);
     typeField(this->eventType);
   }
+  EOSEventPacket() : EOSEventPacket(0) {}
 
   template <typename T>
     requires(std::derived_from<T, EOSEventPacket>)

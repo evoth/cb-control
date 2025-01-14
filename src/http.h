@@ -55,12 +55,13 @@ class HTTPRequest : public HTTPMessage {
   std::string method;
   std::string target;
 
-  HTTPRequest(std::string method = "", std::string target = "")
+  HTTPRequest(std::string method, std::string target)
       : method(method), target(target) {
     field(this->method, {}, {" "});
     field(this->target, {}, {" "});
     field(this->httpVersion, {}, {"\r\n"});
   }
+  HTTPRequest() : HTTPRequest("", "") {}
 };
 
 class HTTPResponse : public HTTPMessage {
@@ -68,12 +69,13 @@ class HTTPResponse : public HTTPMessage {
   std::string statusCode;
   std::string statusText;
 
-  HTTPResponse(std::string statusCode = "", std::string statusText = "")
+  HTTPResponse(std::string statusCode, std::string statusText)
       : statusCode(statusCode), statusText(statusText) {
     field(this->httpVersion, {}, {" "});
     field(this->statusCode, {}, {" "});
     field(this->statusText, {}, {"\r\n"});
   }
+  HTTPResponse() : HTTPResponse("", "") {}
 };
 
 #endif

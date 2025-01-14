@@ -57,10 +57,11 @@ class EventPacket : public TCPPacket {
   uint32_t length = 0;
   uint32_t eventCode = 0;
 
-  EventPacket(uint32_t eventCode = 0) : eventCode(eventCode) {
+  EventPacket(uint32_t eventCode) : eventCode(eventCode) {
     lengthField(this->length);
     typeField(this->eventCode);
   }
+  EventPacket() : EventPacket(0) {}
 
   template <typename T>
     requires(std::derived_from<T, EventPacket>)
@@ -75,11 +76,12 @@ class EventContainer : public EventPacket {
   std::vector<Buffer> events;
 
   // TODO: Use move semantics for events
-  EventContainer(std::string id = "", std::vector<Buffer> events = {})
+  EventContainer(std::string id, std::vector<Buffer> events)
       : EventPacket(0x01), id(id), events(events) {
     field(this->id);
     field<EventPacket>(this->events);
   }
+  EventContainer() : EventContainer("", {}) {}
 };
 
 class ExceptionEvent : public EventPacket {
@@ -87,11 +89,12 @@ class ExceptionEvent : public EventPacket {
   uint16_t contextCode = 0;
   uint16_t typeCode = 0;
 
-  ExceptionEvent(uint16_t contextCode = 0, uint16_t typeCode = 0)
+  ExceptionEvent(uint16_t contextCode, uint16_t typeCode)
       : EventPacket(0x02), contextCode(contextCode), typeCode(typeCode) {
     field(this->contextCode);
     field(this->typeCode);
   }
+  ExceptionEvent() : ExceptionEvent(0, 0) {}
 
   ExceptionEvent(Exception& e)
       : ExceptionEvent(static_cast<uint16_t>(e.context),
@@ -102,10 +105,10 @@ class ConnectEvent : public EventPacket {
  public:
   bool isConnected = false;
 
-  ConnectEvent(bool isConnected = false)
-      : EventPacket(0x03), isConnected(isConnected) {
+  ConnectEvent(bool isConnected) : EventPacket(0x03), isConnected(isConnected) {
     field(this->isConnected);
   }
+  ConnectEvent() : ConnectEvent(false) {}
 };
 
 class CaptureEvent : public EventPacket {
@@ -119,9 +122,9 @@ class SetPropEvent : public EventPacket {
   uint32_t valueNumerator = 0;
   uint32_t valueDenominator = 0;
 
-  SetPropEvent(uint16_t propCode = 0,
-               uint32_t valueNumerator = 0,
-               uint32_t valueDenominator = 0)
+  SetPropEvent(uint16_t propCode,
+               uint32_t valueNumerator,
+               uint32_t valueDenominator)
       : EventPacket(0x05),
         propCode(propCode),
         valueNumerator(valueNumerator),
@@ -130,6 +133,7 @@ class SetPropEvent : public EventPacket {
     field(this->valueNumerator);
     field(this->valueDenominator);
   }
+  SetPropEvent() : SetPropEvent(0, 0, 0) {}
 };
 
 #endif
