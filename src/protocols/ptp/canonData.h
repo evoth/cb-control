@@ -1,8 +1,8 @@
 #ifndef CB_CONTROL_PTP_CANONDATA_H
 #define CB_CONTROL_PTP_CANONDATA_H
 
-#include "../camera.h"
-#include "../packet.h"
+#include "../../camera.h"
+#include "../../packet.h"
 #include "ptp.h"
 
 class EOSDeviceInfo : public PTPPacket {

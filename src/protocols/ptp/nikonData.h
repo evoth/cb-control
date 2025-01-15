@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_PTP_NIKONDATA_H
 #define CB_CONTROL_PTP_NIKONDATA_H
 
-#include "../packet.h"
+#include "../../packet.h"
 
 /* Nikon vendor PTP Enums */
 

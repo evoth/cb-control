@@ -26,4 +26,4 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	$(RM) $(OBJDIR)/*.o
+	rd /s /q $(OBJDIR)

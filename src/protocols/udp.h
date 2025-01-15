@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_UDP_H
 #define CB_CONTROL_UDP_H
 
-#include "socket.h"
+#include "../socket.h"
 
 class UDPMulticastSocket : public virtual Socket {
  public:

@@ -1,6 +1,6 @@
-#include "http.h"
 #include "logger.h"
 #include "platforms/windows/socket.h"
+#include "protocols/http.h"
 
 #include <thread>
 
@@ -12,9 +12,11 @@ int main() {
   std::string addr;
 
   while (true) {
-    if (req.recv(socket, 0)) {
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    for (int i = 0; req.recv(socket, 0); i++) {
       addr = socket.getRemoteIp();
-      Logger::log("Received from %s:", addr.c_str());
+      Logger::log("[%d] Received from %s (port %d):", i, addr.c_str(),
+                  socket.getRemotePort());
       Logger::log(req, true);
     }
   }

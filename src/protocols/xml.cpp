@@ -1,5 +1,5 @@
 #include "xml.h"
-#include "exception.h"
+#include "../exception.h"
 
 void XMLText::pack(Buffer& buffer, int& offset) {
   for (char& c : text)

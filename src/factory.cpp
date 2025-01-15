@@ -1,8 +1,8 @@
 #include "factory.h"
 
 #include "logger.h"
-#include "ptp/canon.h"
-#include "ptp/nikon.h"
+#include "protocols/ptp/canon.h"
+#include "protocols/ptp/nikon.h"
 
 #if defined(_WIN32)
 #include "platforms/windows/socket.h"

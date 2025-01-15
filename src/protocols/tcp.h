@@ -1,8 +1,9 @@
 #ifndef CB_CONTROL_TCP_H
 #define CB_CONTROL_TCP_H
 
-#include "socket.h"
+#include "../socket.h"
 
+// TODO: Interface for setting options like KEEPALIVE and NODELAY
 class TCPSocket : public virtual Socket {
  public:
   virtual bool connect(const std::string& ip,

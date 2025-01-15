@@ -2,7 +2,7 @@
 #define CB_CONTROL_FACTORY_H
 
 #include "camera.h"
-#include "ptp/ip.h"
+#include "protocols/ptp/ip.h"
 
 template <typename T>
 class Factory {

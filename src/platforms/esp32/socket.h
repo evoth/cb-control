@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_ESP32_SOCKET_H
 #define CB_CONTROL_ESP32_SOCKET_H
 
-#include "../../tcp.h"
+#include "../../protocols/tcp.h"
 
 #include <WiFi.h>
 #include <elapsedMillis.h>
@@ -12,6 +12,7 @@ class ESP32TCPSocket : public TCPSocket, BufferedSocket {
   ~ESP32TCPSocket() { client.stop(); }
 
   bool connect(const std::string& ip, int port) override {
+    // TODO: Set socket options
     return client.connect(ip.c_str(), port);
   }
 

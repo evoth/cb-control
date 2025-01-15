@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_PTP_PTP_H
 #define CB_CONTROL_PTP_PTP_H
 
-#include "../camera.h"
+#include "../../camera.h"
 #include "ptpData.h"
 
 #include <mutex>
