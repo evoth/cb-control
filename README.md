@@ -20,14 +20,14 @@ C++ module for camera discovery and control using various protocols.
 - Decoupled camera control API using events to facilitate control over only a binary stream
 - Rich packet API to allow flexible bidirectional packet definition and parsing to/from binary
 - Minimal implementations of several protocols:
+  - Buffered TCP sockets
   - PTP
   - PTP/IP
-  - Buffered TCP sockets
-  - UDP multicast
   - HTTP
   - XML
+  - UDP multicast
 - Easy portability to new platforms
-  - Currently supports Windows and the ESP32 microcontroller
+  - Currently supports Windows and the ESP32 microcontroller (build with PlatformIO)
   - Will later add Linux/macOS and possibly Android
 
 ## Upcoming features
