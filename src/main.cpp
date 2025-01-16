@@ -1,24 +1,40 @@
 #include "logger.h"
-#include "platforms/windows/socket.h"
-#include "protocols/http.h"
+#include "proxy.h"
 
 #include <thread>
 
 int main() {
-  WindowsUDPMulticastSocket socket;
-  socket.begin("239.255.255.250", 1900);
+  const std::array<uint8_t, 16> guid(
+      {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7});
 
-  HTTPRequest req;
-  std::string addr;
+  CameraWrapper camera(guid, "Tim", "192.168.4.7");
 
-  while (true) {
+  for (int i = 0; i < 2; i++) {
+    Logger::log("Connecting to camera...");
+    camera.connect();
     std::this_thread::sleep_for(std::chrono::seconds(5));
-    for (int i = 0; req.recv(socket, 0); i++) {
-      addr = socket.getRemoteIp();
-      Logger::log("[%d] Received from %s (port %d):", i, addr.c_str(),
-                  socket.getRemotePort());
-      Logger::log(req, true);
-    }
+
+    camera.setProp(CameraProp::Aperture, {56, 10});
+    camera.setProp(CameraProp::ShutterSpeed, {1, 100});
+    camera.setProp(CameraProp::ISO, {400, 1});
+    camera.capture();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    camera.setProp(CameraProp::Aperture, {80, 10});
+    camera.setProp(CameraProp::ShutterSpeed, {1, 1000});
+    camera.setProp(CameraProp::ISO, {100, 1});
+    camera.capture();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+
+    camera.disconnect();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+  }
+
+  std::unique_ptr<EventContainer> event = camera.popEvent();
+  Logger::log("=== Event Container ===");
+  for (const Buffer& event : event->events) {
+    Logger::log("Event: ");
+    Logger::log(event);
   }
 
   return 0;
