@@ -40,11 +40,11 @@ void XMLElement::pack(Buffer& buffer, int& offset) {
 void XMLElement::unpack(const Buffer& buffer,
                         int& offset,
                         std::optional<int> limitOffset) {
-  namePacker.unpack(name, buffer, offset, limitOffset);
+  int limit = getUnpackLimit(buffer.size(), limitOffset);
 
   children.clear();
 
-  int limit = getUnpackLimit(buffer.size(), limitOffset);
+  namePacker.unpack(name, buffer, offset, limitOffset);
   std::string temp;
 
   if (name.size() >= 1 && name[name.size() - 1] == '>') {
@@ -68,7 +68,7 @@ void XMLElement::unpack(const Buffer& buffer,
   name.pop_back();
 
   if (temp == "/")
-    return;
+    return;  // Self-closing tag
 
   while (offset < limit && !(offset + 1 < limit && buffer[offset] == '<' &&
                              buffer[offset + 1] == '/')) {
@@ -91,6 +91,16 @@ XMLElement::operator std::string() const {
     return textNode->text;
 
   return "";
+}
+
+bool XMLElement::containsTag(std::string name) const {
+  for (auto& child : children) {
+    if (auto element = dynamic_cast<XMLElement*>(child.get())) {
+      if (element->name == name)
+        return true;
+    }
+  }
+  return false;
 }
 
 XMLElement& XMLElement::getTagByName(std::string name) const {

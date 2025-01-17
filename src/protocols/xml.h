@@ -52,6 +52,7 @@ class XMLElement : public XMLNode {
 
   operator std::string() const;
 
+  bool containsTag(std::string name) const;
   XMLElement& getTagByName(std::string name) const;
   XMLElement& operator[](std::string name) const { return getTagByName(name); }
 

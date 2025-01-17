@@ -136,4 +136,41 @@ class SetPropEvent : public EventPacket {
   SetPropEvent() : SetPropEvent(0, 0, 0) {}
 };
 
+class DiscoveryAddEvent : public EventPacket {
+ public:
+  uint16_t method = 0;
+  std::string connectionAddress;
+  std::string serialNumber;
+  std::string manufacturer;
+  std::string model;
+  std::string name;
+
+  DiscoveryAddEvent(uint16_t method,
+                    std::string connectionAddress,
+                    std::string serialNumber,
+                    std::string manufacturer,
+                    std::string model,
+                    std::string name)
+      : EventPacket(0x06),
+        method(method),
+        connectionAddress(connectionAddress),
+        serialNumber(serialNumber),
+        manufacturer(manufacturer),
+        model(model),
+        name(name) {
+    field(this->method);
+    field(this->connectionAddress);
+    field(this->serialNumber);
+    field(this->manufacturer);
+    field(this->model);
+    field(this->name);
+  }
+  DiscoveryAddEvent() : DiscoveryAddEvent(0, "", "", "", "", "") {}
+};
+
+class DiscoveryRemoveEvent : public EventPacket {
+ public:
+  DiscoveryRemoveEvent() : EventPacket(0x07) {}
+};
+
 #endif

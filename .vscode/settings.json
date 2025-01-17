@@ -103,6 +103,7 @@
     "cSpell.words": [
       "CCAPI",
       "mesg",
+      "Pairable",
       "PTPIP"
     ],
     "C_Cpp.default.cppStandard": "c++20",

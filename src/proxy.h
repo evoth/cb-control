@@ -29,10 +29,10 @@ class CameraWrapper : public CameraProxy {
                 int port = 15740)
       : cameraFactory(std::make_unique<PTPCameraFactory>(
             std::make_unique<PTPIPFactory>(clientGuid, clientName, ip, port))) {
+    // TODO: Exception in case of unsupported factory? And where should it go?
   }
 
   std::unique_ptr<EventContainer> popEvent() override;
-
   void receiveEvent(std::unique_ptr<EventContainer> event) override;
 
  protected:
