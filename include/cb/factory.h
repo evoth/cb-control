@@ -1,8 +1,8 @@
 #ifndef CB_CONTROL_FACTORY_H
 #define CB_CONTROL_FACTORY_H
 
-#include "camera.h"
-#include "ptp/ip.h"
+#include <cb/camera.h>
+#include <cb/ptp/ip.h>
 
 template <typename T>
 class Factory {

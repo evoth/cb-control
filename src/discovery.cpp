@@ -1,4 +1,4 @@
-#include "discovery.h"
+#include <cb/discovery.h>
 
 void DiscoveryService::receiveEvent(std::unique_ptr<EventContainer> container) {
   for (const Buffer& event : container->events) {

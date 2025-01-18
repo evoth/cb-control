@@ -38,15 +38,6 @@ enum class ExceptionType {
 
 class Exception : public std::exception {
  public:
-  // template <typename... Args>
-  // Exception(ExceptionContext context,
-  //           ExceptionType type,
-  //           const char* format,
-  //           Args... args)
-  //     : context(context), type(type) {
-  //   snprintf(msg, sizeof(msg), format, args...);
-  // }
-
   Exception(ExceptionContext context, ExceptionType type)
       : context(context), type(type) {
     snprintf(msg, sizeof(msg), "CB Control Exception (context=%d, type=%d)",

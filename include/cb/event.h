@@ -1,9 +1,9 @@
 #ifndef CB_CONTROL_EVENT_H
 #define CB_CONTROL_EVENT_H
 
-#include "exception.h"
-#include "logger.h"
-#include "protocols/tcp.h"
+#include <cb/exception.h>
+#include <cb/logger.h>
+#include <cb/protocols/tcp.h>
 
 #include <mutex>
 #include <queue>

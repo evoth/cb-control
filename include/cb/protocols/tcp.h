@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_TCP_H
 #define CB_CONTROL_TCP_H
 
-#include "../socket.h"
+#include <cb/socket.h>
 
 // TODO: Interface for setting options like KEEPALIVE and NODELAY
 class TCPSocket : public virtual Socket {

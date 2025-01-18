@@ -1,4 +1,4 @@
-#include "ptp.h"
+#include <cb/ptp/ptp.h>
 
 #if defined(ESP32)
 #include <esp_pthread.h>

@@ -6,6 +6,7 @@ SRCDIR = src
 OBJDIR = obj
 LDFLAGS = -g
 LDLIBS = -LC:\MinGW\lib -lws2_32
+INC=-Iinclude
 
 RM = del /f
 MKDIR = powershell.exe 'md -Force $(1) | Out-Null'
@@ -23,7 +24,7 @@ $(TARGET): $(OBJECTS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	$(call MKDIR,$(dir $@))
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INC) -c $< -o $@
 
 clean:
 	rd /s /q $(OBJDIR)

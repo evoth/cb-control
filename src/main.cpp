@@ -1,5 +1,5 @@
-#include "logger.h"
-#include "proxy.h"
+#include <cb/logger.h>
+#include <cb/proxy.h>
 
 #include <thread>
 

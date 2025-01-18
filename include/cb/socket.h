@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_SOCKET_H
 #define CB_CONTROL_SOCKET_H
 
-#include "packet.h"
+#include <cb/packet.h>
 
 // TODO: Use noexcept?
 class Socket {

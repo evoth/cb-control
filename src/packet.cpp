@@ -1,4 +1,4 @@
-#include "packet.h"
+#include <cb/packet.h>
 
 #include <iterator>
 

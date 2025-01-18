@@ -1,7 +1,7 @@
-#include "ip.h"
-#include "ipData.h"
+#include <cb/ptp/ip.h>
+#include <cb/ptp/ipData.h>
 
-#include "../logger.h"
+#include <cb/logger.h>
 
 // TODO: Formal logging
 

@@ -1,8 +1,8 @@
 #ifndef CB_CONTROL_HTTP_H
 #define CB_CONTROL_HTTP_H
 
-#include "tcp.h"
-#include "udp.h"
+#include <cb/protocols/tcp.h>
+#include <cb/protocols/udp.h>
 
 #include <map>
 

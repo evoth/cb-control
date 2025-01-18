@@ -1,9 +1,9 @@
 #ifndef CB_CONTROL_MANAGER_H
 #define CB_CONTROL_MANAGER_H
 
-#include "discovery.h"
-#include "event.h"
-#include "proxy.h"
+#include <cb/discovery.h>
+#include <cb/event.h>
+#include <cb/proxy.h>
 
 class CameraManager : public EventProxy<EventContainer> {
  public:

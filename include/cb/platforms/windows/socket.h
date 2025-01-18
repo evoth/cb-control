@@ -1,9 +1,9 @@
 #ifndef CB_CONTROL_WINDOWS_SOCKET_H
 #define CB_CONTROL_WINDOWS_SOCKET_H
 
-#include "../../exception.h"
-#include "../../protocols/tcp.h"
-#include "../../protocols/udp.h"
+#include <cb/exception.h>
+#include <cb/protocols/tcp.h>
+#include <cb/protocols/udp.h>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>

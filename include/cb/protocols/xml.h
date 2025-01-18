@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_XML_H
 #define CB_CONTROL_XML_H
 
-#include "../packet.h"
+#include <cb/packet.h>
 
 #include <map>
 

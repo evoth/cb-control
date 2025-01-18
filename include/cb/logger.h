@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_LOGGER_H
 #define CB_CONTROL_LOGGER_H
 
-#include "packet.h"
+#include <cb/packet.h>
 
 #if defined(_WIN32)
 #include <iostream>

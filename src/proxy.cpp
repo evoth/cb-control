@@ -1,4 +1,4 @@
-#include "proxy.h"
+#include <cb/proxy.h>
 
 void CameraProxy::sendEvent(std::unique_ptr<EventPacket> event) {
   receiveEvent(

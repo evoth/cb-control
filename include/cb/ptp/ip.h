@@ -1,8 +1,8 @@
 #ifndef CB_CONTROL_PTP_IP_H
 #define CB_CONTROL_PTP_IP_H
 
-#include "../protocols/tcp.h"
-#include "ptp.h"
+#include <cb/protocols/tcp.h>
+#include <cb/ptp/ptp.h>
 
 // TODO: Figure out where to catch and deal with exceptions
 class PTPIP : public PTPTransport {

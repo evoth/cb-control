@@ -1,9 +1,9 @@
 #ifndef CB_CONTROL_PROXY_H
 #define CB_CONTROL_PROXY_H
 
-#include "camera.h"
-#include "event.h"
-#include "factory.h"
+#include <cb/camera.h>
+#include <cb/event.h>
+#include <cb/factory.h>
 
 #include <map>
 

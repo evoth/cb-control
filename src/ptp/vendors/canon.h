@@ -1,7 +1,6 @@
 #ifndef CB_CONTROL_PTP_CANON_H
 #define CB_CONTROL_PTP_CANON_H
 
-#include "../ptp.h"
 #include "canonData.h"
 
 // TODO: Break out CanonPTPCamera into classes based on series/behavior (e.g.

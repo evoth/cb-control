@@ -1,13 +1,13 @@
-#include "factory.h"
+#include <cb/factory.h>
+#include <cb/logger.h>
 
-#include "logger.h"
 #include "ptp/vendors/canon.h"
 #include "ptp/vendors/nikon.h"
 
 #if defined(_WIN32)
-#include "platforms/windows/socket.h"
+#include <cb/platforms/windows/socket.h>
 #elif defined(ESP32)
-#include "platforms/esp32/socket.h"
+#include <cb/platforms/esp32/socket.h>
 #endif
 
 std::unique_ptr<EventCamera> PTPCameraFactory::create() const {

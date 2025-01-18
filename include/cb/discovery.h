@@ -1,8 +1,8 @@
 #ifndef CB_CONTROL_DISCOVERY_H
 #define CB_CONTROL_DISCOVERY_H
 
-#include "event.h"
-#include "proxy.h"
+#include <cb/event.h>
+#include <cb/proxy.h>
 
 class DiscoveryService : public EventProxy<EventContainer> {
  public:

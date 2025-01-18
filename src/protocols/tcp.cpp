@@ -1,4 +1,4 @@
-#include "tcp.h"
+#include <cb/protocols/tcp.h>
 
 int TCPPacket::send(TCPSocket& socket) {
   Buffer buffer = pack();

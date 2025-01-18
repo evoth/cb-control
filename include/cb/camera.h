@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_CAMERA_H
 #define CB_CONTROL_CAMERA_H
 
-#include "event.h"
+#include <cb/event.h>
 
 // Values are stored as (numerator, denominator)
 typedef std::pair<uint32_t, uint32_t> CameraPropValue;
