@@ -1,8 +1,8 @@
 #ifndef CB_CONTROL_PTP_PTPDATA_H
 #define CB_CONTROL_PTP_PTPDATA_H
 
-#include "../../exception.h"
-#include "../../packet.h"
+#include "../exception.h"
+#include "../packet.h"
 
 #include <map>
 #include <typeindex>

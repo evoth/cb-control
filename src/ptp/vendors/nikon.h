@@ -1,8 +1,8 @@
 #ifndef CB_CONTROL_PTP_NIKON_H
 #define CB_CONTROL_PTP_NIKON_H
 
+#include "../ptp.h"
 #include "nikonData.h"
-#include "ptp.h"
 
 class NikonPTPCamera : public PTPCamera {
  public:

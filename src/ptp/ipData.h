@@ -1,7 +1,7 @@
 #ifndef CB_CONTROL_PTP_IPDATA_H
 #define CB_CONTROL_PTP_IPDATA_H
 
-#include "../tcp.h"
+#include "../protocols/tcp.h"
 
 enum class DataPhaseInfo : uint32_t {
   Unknown = 0x00,

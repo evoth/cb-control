@@ -3,7 +3,7 @@
 
 #include "../../camera.h"
 #include "../../packet.h"
-#include "ptp.h"
+#include "../ptp.h"
 
 class EOSDeviceInfo : public PTPPacket {
  public:
