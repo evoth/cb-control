@@ -3,6 +3,8 @@
 
 #include <cb/protocols/tcp.h>
 
+namespace cb {
+
 enum class DataPhaseInfo : uint32_t {
   Unknown = 0x00,
   DataIn = 0x01,
@@ -188,5 +190,7 @@ class Pong : public IPPacket {
  public:
   Pong() : IPPacket(0x0e) {}
 };
+
+}  // namespace cb
 
 #endif

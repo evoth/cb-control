@@ -3,6 +3,8 @@
 
 #include <cb/socket.h>
 
+namespace cb {
+
 class UDPMulticastSocket : public virtual Socket {
  public:
   virtual bool begin(const std::string& ip,
@@ -10,5 +12,7 @@ class UDPMulticastSocket : public virtual Socket {
   virtual std::string getRemoteIp() const = 0;
   virtual int getRemotePort() const = 0;
 };
+
+}  // namespace cb
 
 #endif

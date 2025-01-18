@@ -4,6 +4,8 @@
 #include <esp_pthread.h>
 #endif
 
+namespace cb {
+
 void PTP::openTransport() {
   if (!transport)
     throw Exception(ExceptionContext::PTPTransport, ExceptionType::IsNull);
@@ -154,4 +156,6 @@ bool PTPCamera::isOpSupported(uint16_t operationCode) {
 bool PTPCamera::isPropSupported(uint16_t propertyCode) {
   return getCachedDI()->isPropSupported(
       propertyCode, static_cast<uint32_t>(vendorExtensionId));
+}
+
 }

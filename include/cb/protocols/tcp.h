@@ -3,6 +3,8 @@
 
 #include <cb/socket.h>
 
+namespace cb {
+
 // TODO: Interface for setting options like KEEPALIVE and NODELAY
 class TCPSocket : public virtual Socket {
  public:
@@ -18,5 +20,7 @@ class TCPPacket : public Packet, public Sendable<TCPSocket> {
                    Buffer& buffer,
                    unsigned int timeoutMs = 10000) override;
 };
+
+}  // namespace cb
 
 #endif

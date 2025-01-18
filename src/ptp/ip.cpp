@@ -3,6 +3,8 @@
 
 #include <cb/logger.h>
 
+namespace cb {
+
 // TODO: Formal logging
 
 void PTPIP::open() {
@@ -100,4 +102,6 @@ OperationResponseData PTPIP::transaction(const OperationRequestData& request) {
                       ExceptionType::UnexpectedPacket);
     }
   }
+}
+
 }

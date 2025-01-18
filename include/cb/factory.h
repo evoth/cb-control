@@ -4,6 +4,8 @@
 #include <cb/camera.h>
 #include <cb/ptp/ip.h>
 
+namespace cb {
+
 template <typename T>
 class Factory {
  public:
@@ -42,5 +44,7 @@ class PTPIPFactory : public Factory<PTPTransport> {
   const std::string ip;
   const int port;
 };
+
+}  // namespace cb
 
 #endif

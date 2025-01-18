@@ -9,6 +9,8 @@
 #include <queue>
 #include <utility>
 
+namespace cb {
+
 template <typename T>
 class EventEmitter {
  public:
@@ -172,5 +174,7 @@ class DiscoveryRemoveEvent : public EventPacket {
  public:
   DiscoveryRemoveEvent() : EventPacket(0x07) {}
 };
+
+}  // namespace cb
 
 #endif

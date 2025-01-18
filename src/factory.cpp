@@ -10,6 +10,8 @@
 #include <cb/platforms/esp32/socket.h>
 #endif
 
+namespace cb {
+
 std::unique_ptr<EventCamera> PTPCameraFactory::create() const {
   PTP ptp(transportFactory->create());
   ptp.openTransport();
@@ -50,4 +52,6 @@ std::unique_ptr<PTPTransport> PTPIPFactory::create() const {
   throw Exception(ExceptionContext::Factory,
                   ExceptionType::UnsupportedTransport);
 #endif
+}
+
 }

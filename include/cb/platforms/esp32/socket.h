@@ -6,6 +6,8 @@
 #include <WiFi.h>
 #include <elapsedMillis.h>
 
+namespace cb {
+
 // TODO: Figure out error logging
 class ESP32TCPSocket : public TCPSocket, BufferedSocket {
  public:
@@ -48,5 +50,7 @@ class ESP32TCPSocket : public TCPSocket, BufferedSocket {
  private:
   WiFiClient client;
 };
+
+}  // namespace cb
 
 #endif

@@ -3,6 +3,8 @@
 
 #include <chrono>
 
+namespace cb {
+
 int Socket::sendAttempt(Buffer& buffer) {
   int result = send(buffer);
   if (result < buffer.size()) {
@@ -96,4 +98,6 @@ int BufferedSocket::recv(Buffer& buffer,
            (!length.has_value() || totalReceived < length.value()));
 
   return totalReceived;
+}
+
 }

@@ -4,6 +4,8 @@
 #include <cb/ptp/ptp.h>
 #include "nikonData.h"
 
+namespace cb {
+
 class NikonPTPCamera : public PTPCamera {
  public:
   NikonPTPCamera(PTP&& ptp)
@@ -20,5 +22,7 @@ class NikonPTPCamera : public PTPCamera {
 
   std::unique_ptr<DeviceInfo> getDeviceInfo() override;
 };
+
+}  // namespace cb
 
 #endif

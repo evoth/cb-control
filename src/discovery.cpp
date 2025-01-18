@@ -1,5 +1,7 @@
 #include <cb/discovery.h>
 
+namespace cb {
+
 void DiscoveryService::receiveEvent(std::unique_ptr<EventContainer> container) {
   for (const Buffer& event : container->events) {
     try {
@@ -14,4 +16,6 @@ void DiscoveryService::receiveEvent(std::unique_ptr<EventContainer> container) {
                                 std::vector<Buffer>{ExceptionEvent(e).pack()});
     }
   }
+}
+
 }

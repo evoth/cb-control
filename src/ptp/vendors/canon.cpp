@@ -1,5 +1,7 @@
 #include "canon.h"
 
+namespace cb {
+
 void CanonPTPCamera::openSession() {
   PTP::openSession();
 
@@ -123,4 +125,6 @@ void CanonPTPCamera::setProp(CameraProp prop, CameraPropValue value) {
                     ExceptionType::UnsupportedValue);
 
   eosSetDeviceProp(canonProp.value(), canonValue.value());
+}
+
 }

@@ -1,6 +1,8 @@
 #include <cb/exception.h>
 #include <cb/protocols/xml.h>
 
+namespace cb {
+
 void XMLText::pack(Buffer& buffer, int& offset) {
   for (char& c : text)
     packer.pack(c, buffer, offset);
@@ -124,4 +126,6 @@ void XMLDocument::unpack(const Buffer& buffer,
                          std::optional<int> limitOffset) {
   Packet::unpack(buffer, offset, limitOffset);
   XMLElement::unpack(buffer, offset, limitOffset);
+}
+
 }

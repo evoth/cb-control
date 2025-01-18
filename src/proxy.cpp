@@ -1,5 +1,7 @@
 #include <cb/proxy.h>
 
+namespace cb {
+
 void CameraProxy::sendEvent(std::unique_ptr<EventPacket> event) {
   receiveEvent(
       std::make_unique<EventContainer>(id, std::vector<Buffer>{event->pack()}));
@@ -99,4 +101,6 @@ void CameraWrapper::receiveEvent(std::unique_ptr<EventContainer> container) {
       pushCameraEvent(std::make_unique<ExceptionEvent>(e));
     }
   }
+}
+
 }

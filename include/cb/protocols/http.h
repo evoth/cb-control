@@ -6,6 +6,8 @@
 
 #include <map>
 
+namespace cb {
+
 class HTTPMessage : public Packet,
                     public Sendable<TCPSocket>,
                     public Sendable<UDPMulticastSocket> {
@@ -84,5 +86,7 @@ class HTTPResponse : public HTTPMessage {
   }
   HTTPResponse() : HTTPResponse("", "") {}
 };
+
+}  // namespace cb
 
 #endif

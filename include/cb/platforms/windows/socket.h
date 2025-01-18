@@ -8,6 +8,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+namespace cb {
+
 class WindowsSocket : public virtual BufferedSocket {
  public:
   WindowsSocket() {
@@ -200,5 +202,7 @@ class WindowsUDPMulticastSocket : public UDPMulticastSocket, WindowsSocket {
   std::string remoteIp;
   int remotePort = 0;
 };
+
+}  // namespace cb
 
 #endif

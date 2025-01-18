@@ -1,5 +1,7 @@
 #include "canonData.h"
 
+namespace cb {
+
 PairMap<CameraProp, uint32_t> EOSProps({
     {CameraProp::Aperture, EOSPropertyCode::Aperture},
     {CameraProp::ShutterSpeed, EOSPropertyCode::ShutterSpeed},
@@ -60,3 +62,5 @@ std::map<CameraProp, PairMap<uint32_t, CameraPropValue>> EOSPropValues{
         }),
     },
 };
+
+}

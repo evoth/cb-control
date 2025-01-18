@@ -5,6 +5,8 @@
 
 #include <map>
 
+namespace cb {
+
 #define XML_WHITESPACE " \r\n\t"
 
 class XMLNode : public Packet {
@@ -79,5 +81,7 @@ class XMLDocument : public XMLElement {
               int& offset,
               std::optional<int> limitOffset) override;
 };
+
+}  // namespace cb
 
 #endif

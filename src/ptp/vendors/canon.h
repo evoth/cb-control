@@ -3,6 +3,8 @@
 
 #include "canonData.h"
 
+namespace cb {
+
 // TODO: Break out CanonPTPCamera into classes based on series/behavior (e.g.
 // EOS, EOS M, Powershot, etc.)
 
@@ -32,5 +34,7 @@ class CanonPTPCamera : public PTPCamera {
          EOSDeviceProp<T>(devicePropertyCode, value).pack());
   }
 };
+
+}  // namespace cb
 
 #endif

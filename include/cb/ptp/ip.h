@@ -4,6 +4,8 @@
 #include <cb/protocols/tcp.h>
 #include <cb/ptp/ptp.h>
 
+namespace cb {
+
 // TODO: Figure out where to catch and deal with exceptions
 class PTPIP : public PTPTransport {
  public:
@@ -50,5 +52,7 @@ class PTPIP : public PTPTransport {
   std::array<uint8_t, 16> guid;
   std::string name;
 };
+
+}  // namespace cb
 
 #endif

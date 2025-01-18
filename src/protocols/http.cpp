@@ -3,6 +3,8 @@
 
 #include <algorithm>
 
+namespace cb {
+
 // TODO: Implement chunked encoding and automatically use it when header present
 void HTTPMessage::pack(Buffer& buffer, int& offset) {
   Packet::pack(buffer, offset);
@@ -93,4 +95,6 @@ int HTTPMessage::recv(UDPMulticastSocket& socket,
   socket.recv(buffer, timeoutMs);
   unpack(buffer);
   return buffer.size();
+}
+
 }

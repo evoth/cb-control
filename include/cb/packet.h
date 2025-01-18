@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+namespace cb {
+
 typedef std::vector<uint8_t> Buffer;
 class Packet;
 
@@ -403,5 +405,7 @@ class Packet : public IField {
   SpecialProp<uint32_t> _length;
   SpecialProp<uint32_t> _type;
 };
+
+}  // namespace cb
 
 #endif

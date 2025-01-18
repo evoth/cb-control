@@ -3,6 +3,8 @@
 
 #include <cb/packet.h>
 
+namespace cb {
+
 /* Nikon vendor PTP Enums */
 
 namespace NikonOperationCode {
@@ -46,5 +48,7 @@ enum NikonOperationCode : uint16_t {
   GetDevicePropEx = 0x9504,
 };
 }
+
+}  // namespace cb
 
 #endif

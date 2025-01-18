@@ -5,6 +5,8 @@
 #include <cb/packet.h>
 #include <cb/ptp/ptp.h>
 
+namespace cb {
+
 class EOSDeviceInfo : public PTPPacket {
  public:
   uint32_t length;
@@ -350,5 +352,7 @@ enum EOSPropertyCode : uint32_t {
 extern PairMap<CameraProp, uint32_t> EOSProps;
 
 extern std::map<CameraProp, PairMap<uint32_t, CameraPropValue>> EOSPropValues;
+
+}  // namespace cb
 
 #endif

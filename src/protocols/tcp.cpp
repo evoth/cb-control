@@ -1,5 +1,7 @@
 #include <cb/protocols/tcp.h>
 
+namespace cb {
+
 int TCPPacket::send(TCPSocket& socket) {
   Buffer buffer = pack();
   return socket.sendAttempt(buffer);
@@ -15,4 +17,6 @@ int TCPPacket::recv(TCPSocket& socket, Buffer& buffer, unsigned int timeoutMs) {
   unpack(buffer);
 
   return buffer.size();
+}
+
 }

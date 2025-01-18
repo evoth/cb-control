@@ -3,6 +3,8 @@
 
 #include <cb/packet.h>
 
+namespace cb {
+
 // TODO: Use noexcept?
 class Socket {
  public:
@@ -59,5 +61,7 @@ class Sendable {
   // Should put received packet in buffer and unpack
   virtual int recv(T& socket, Buffer& buffer, unsigned int timeoutMs) = 0;
 };
+
+}  // namespace cb
 
 #endif

@@ -4,6 +4,8 @@
 #include <thread>
 
 int main() {
+  using namespace cb;
+
   const std::array<uint8_t, 16> guid(
       {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7});
 

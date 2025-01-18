@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <exception>
 
+namespace cb {
+
 enum class ExceptionContext {
   Socket,
   CameraConnect,
@@ -54,5 +56,7 @@ class Exception : public std::exception {
  private:
   char msg[256];
 };
+
+}  // namespace cb
 
 #endif

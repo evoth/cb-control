@@ -7,6 +7,8 @@
 
 #include <map>
 
+namespace cb {
+
 class CameraProxy : public Camera, public EventProxy<EventContainer> {
  public:
   void connect() override;
@@ -57,5 +59,7 @@ class CameraWrapper : public CameraProxy {
 
   void handleEvent(const Buffer& event);
 };
+
+}  // namespace cb
 
 #endif

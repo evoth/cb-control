@@ -4,6 +4,8 @@
 #include <cb/event.h>
 #include <cb/proxy.h>
 
+namespace cb {
+
 class DiscoveryService : public EventProxy<EventContainer> {
  public:
   DiscoveryService(std::map<std::string, std::unique_ptr<CameraProxy>>& cameras)
@@ -17,5 +19,7 @@ class DiscoveryService : public EventProxy<EventContainer> {
  private:
   std::map<std::string, std::unique_ptr<CameraProxy>>& cameras;
 };
+
+}  // namespace cb
 
 #endif

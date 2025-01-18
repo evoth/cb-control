@@ -8,6 +8,8 @@
 #include <thread>
 #include <utility>
 
+namespace cb {
+
 class PTPTransport {
  public:
   // Destructor should close
@@ -110,5 +112,7 @@ class PTPCamera : protected PTP, public EventCamera {
   std::jthread eventThread;
   std::shared_ptr<DeviceInfo> cachedDI;
 };
+
+}  // namespace cb
 
 #endif

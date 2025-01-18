@@ -8,6 +8,8 @@
 #include <typeindex>
 #include <typeinfo>
 
+namespace cb {
+
 struct OperationRequestData {
   const bool dataPhase;
   const bool sending;
@@ -333,5 +335,7 @@ enum class VendorExtensionId : uint32_t {
   Parrot = 0x0000001B,
   Panasonic = 0x0000001C,
 };
+
+}  // namespace cb
 
 #endif

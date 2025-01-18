@@ -9,6 +9,8 @@
 #include <HardwareSerial.h>
 #endif
 
+namespace cb {
+
 class Logger {
  public:
   template <typename... Args>
@@ -54,5 +56,7 @@ class Logger {
     log();
   }
 };
+
+}  // namespace cb
 
 #endif

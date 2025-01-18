@@ -2,6 +2,8 @@
 
 #include <iterator>
 
+namespace cb {
+
 int getUnpackLimit(int hardLimit, std::optional<int> limitOffset) {
   if (limitOffset.has_value() && limitOffset.value() < hardLimit)
     hardLimit = limitOffset.value();
@@ -175,3 +177,5 @@ void Packet::unpack(const Buffer& buffer) {
   int offset = 0;
   unpack(buffer, offset);
 };
+
+}

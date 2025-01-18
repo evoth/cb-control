@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+namespace cb {
+
 void PTPString::pack(Buffer& buffer, int& offset) {
   if (string.length() > PTPString::MAX_CHARS)
     string = string.substr(0, PTPString::MAX_CHARS);
@@ -62,3 +64,5 @@ const std::map<std::type_index, uint16_t> DataTypeMap = {
     {typeid(std::vector<uint64_t>), DataType::AUINT64},
     {typeid(std::string), DataType::STR},
 };
+
+}

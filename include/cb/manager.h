@@ -5,6 +5,8 @@
 #include <cb/event.h>
 #include <cb/proxy.h>
 
+namespace cb {
+
 class CameraManager : public EventProxy<EventContainer> {
  public:
   std::unique_ptr<EventContainer> popEvent() override;
@@ -18,5 +20,7 @@ class CameraManager : public EventProxy<EventContainer> {
   std::map<std::string, std::unique_ptr<CameraProxy>> cameras;
   std::vector<std::unique_ptr<DiscoveryService>> disoveryServices;
 };
+
+}  // namespace cb
 
 #endif

@@ -3,6 +3,8 @@
 
 #include <cb/event.h>
 
+namespace cb {
+
 // Values are stored as (numerator, denominator)
 typedef std::pair<uint32_t, uint32_t> CameraPropValue;
 
@@ -52,5 +54,7 @@ class Camera {
 };
 
 class EventCamera : public Camera, public EventEmitter<EventPacket> {};
+
+}  // namespace cb
 
 #endif

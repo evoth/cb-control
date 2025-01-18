@@ -1,5 +1,7 @@
 #include "nikon.h"
 
+namespace cb {
+
 void NikonPTPCamera::openSession() {
   PTP::openSession();
 
@@ -25,4 +27,6 @@ std::unique_ptr<DeviceInfo> NikonPTPCamera::getDeviceInfo() {
 
 void NikonPTPCamera::getEvents() {
   recv(NikonOperationCode::CheckEvents);
+}
+
 }
