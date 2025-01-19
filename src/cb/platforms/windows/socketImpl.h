@@ -46,7 +46,7 @@ class WindowsSocket : public virtual BufferedSocket {
 };
 
 // TODO: Figure out error logging
-class WindowsTCPSocket : public TCPSocket, WindowsSocket {
+class TCPSocketImpl : public TCPSocket, WindowsSocket {
  public:
   bool connect(const std::string& ip, int port) override {
     close();  // TODO: is this needed?
@@ -108,9 +108,10 @@ class WindowsTCPSocket : public TCPSocket, WindowsSocket {
   }
 };
 
-class WindowsUDPMulticastSocket : public UDPMulticastSocket, WindowsSocket {
+// TODO: Send/listen on all available interfaces ("multi-homed" control point)
+class UDPMulticastSocketImpl : public UDPMulticastSocket, WindowsSocket {
  public:
-  WindowsUDPMulticastSocket() : BufferedSocket(1460) {}
+  UDPMulticastSocketImpl() : BufferedSocket(1460) {}
 
   bool begin(const std::string& ip, int port) override {
     remoteIp = ip;

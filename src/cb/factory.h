@@ -11,7 +11,6 @@ class Factory {
  public:
   virtual ~Factory() = default;
 
-  virtual bool isSupported() const = 0;
   virtual std::unique_ptr<T> create() const = 0;
 };
 
@@ -20,7 +19,6 @@ class PTPCameraFactory : public Factory<EventCamera> {
   PTPCameraFactory(std::unique_ptr<Factory<PTPTransport>> transportFactory)
       : transportFactory(std::move(transportFactory)) {}
 
-  bool isSupported() const override { return transportFactory->isSupported(); }
   std::unique_ptr<EventCamera> create() const override;
 
  private:
@@ -35,7 +33,6 @@ class PTPIPFactory : public Factory<PTPTransport> {
                int port = 15740)
       : clientGuid(clientGuid), clientName(clientName), ip(ip), port(port) {}
 
-  bool isSupported() const override;
   std::unique_ptr<PTPTransport> create() const override;
 
  private:

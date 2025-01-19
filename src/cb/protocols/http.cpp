@@ -97,4 +97,26 @@ int HTTPMessage::recv(UDPMulticastSocket& socket,
   return buffer.size();
 }
 
+std::unique_ptr<HTTPResponse> URL::request(std::unique_ptr<TCPSocket>& socket) {
+  int portNumber = 80;
+  std::string portString = "";
+  if (!port.empty()) {
+    portNumber = std::stoi(port);
+    portString = ":" + port;
+  }
+
+  socket->connect(hostname, portNumber);
+  HTTPRequest request("GET", path.empty() ? "/" : path);
+  request.headers["Host"] = hostname + portString;
+  request.headers["Connection"] = "close";
+  request.send(*socket);
+
+  auto response = std::make_unique<HTTPResponse>();
+  response->recv(*socket);
+
+  socket->close();
+
+  return response;
+}
+
 }

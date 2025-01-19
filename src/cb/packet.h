@@ -214,12 +214,16 @@ class DelimitedString : public Packer<std::string> {
                   std::vector<std::string> end = {"\0"},
                   std::string trimChars = "",
                   bool packTrim = false,
-                  bool keepEnd = false)
+                  bool packEmpty = true,
+                  bool keepEnd = false,
+                  bool seekEnd = true)
       : start(start),
         end(end),
         trimChars(trimChars),
         packTrim(packTrim),
-        keepEnd(keepEnd) {}
+        packEmpty(packEmpty),
+        keepEnd(keepEnd),
+        seekEnd(seekEnd) {}
 
   void pack(std::string& value, Buffer& buffer, int& offset) override;
   void unpack(std::string& value,
@@ -232,7 +236,9 @@ class DelimitedString : public Packer<std::string> {
   std::vector<std::string> end;
   std::string trimChars;
   bool packTrim = false;
+  bool packEmpty = true;
   bool keepEnd = false;
+  bool seekEnd = true;
   Primitive<char> packer;
 };
 
@@ -286,6 +292,16 @@ class Packet : public IField {
 
   Buffer pack();
   void unpack(const Buffer& buffer);
+
+  std::string packString() {
+    Buffer buffer = Packet::pack();
+    return std::string(buffer.begin(), buffer.end());
+  }
+
+  void unpackString(std::string s) {
+    Buffer buffer(s.begin(), s.end());
+    unpack(buffer);
+  }
 
   template <typename T>
     requires(std::derived_from<T, Packet>)
@@ -357,10 +373,12 @@ class Packet : public IField {
              std::vector<std::string> end,
              std::string trimChars = "",
              bool packTrim = false,
-             bool keepEnd = false) {
+             bool packEmpty = true,
+             bool keepEnd = false,
+             bool seekEnd = true) {
     ADD_FIELD(std::string, DelimitedString,
               start COMMA() end COMMA() trimChars COMMA() packTrim COMMA()
-                  keepEnd,
+                  packEmpty COMMA() keepEnd COMMA() seekEnd,
               value);
   }
 

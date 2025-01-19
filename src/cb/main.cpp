@@ -1,42 +1,44 @@
 #include <cb/logger.h>
-#include <cb/proxy.h>
+#include <cb/platforms/socketImpl.h>
+#include <cb/protocols/ssdp.h>
+#include <cb/protocols/xml.h>
 
 #include <thread>
 
 int main() {
   using namespace cb;
 
-  const std::array<uint8_t, 16> guid(
-      {7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7});
+  std::map<std::string, std::unique_ptr<CameraProxy>> cameras;
+  std::array<uint8_t, 16> guid = {'C', 'a', 'p', 't', 'u', 'r', 'e', 'B',
+                                  'e', 'a', 'm', 'P', 'T', 'P', 'I', 'P'};
 
-  CameraWrapper camera(guid, "Tim", "192.168.4.7");
+  SSDPDiscovery ssdp(
+      cameras, std::make_unique<UDPMulticastSocketImpl>(),
+      std::make_unique<TCPSocketImpl>(),
+      {"urn:schemas-canon-com:service:ICPO-SmartPhoneEOSSystemService:1"}, guid,
+      "CaptureBeam");
 
-  for (int i = 0; i < 2; i++) {
-    Logger::log("Connecting to camera...");
-    camera.connect();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    camera.setProp(CameraProp::Aperture, {56, 10});
-    camera.setProp(CameraProp::ShutterSpeed, {1, 100});
-    camera.setProp(CameraProp::ISO, {400, 1});
-    camera.capture();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    camera.setProp(CameraProp::Aperture, {80, 10});
-    camera.setProp(CameraProp::ShutterSpeed, {1, 1000});
-    camera.setProp(CameraProp::ISO, {100, 1});
-    camera.capture();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    camera.disconnect();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-  }
-
-  std::unique_ptr<EventContainer> event = camera.popEvent();
-  Logger::log("=== Event Container ===");
-  for (const Buffer& event : event->events) {
-    Logger::log("Event: ");
-    Logger::log(event);
+  while (true) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::unique_ptr<EventContainer> container = ssdp.popEvent();
+    if (!container)
+      continue;
+    for (const Buffer& event : container->events) {
+      if (auto addEvent = EventPacket::unpackAs<DiscoveryAddEvent>(event)) {
+        Logger::log("===Discovery Add Event===");
+        Logger::log("Camera ID: %s", container->id.c_str());
+        Logger::log("IP address: %s", addEvent->connectionAddress.c_str());
+        Logger::log("Serial number: %s", addEvent->serialNumber.c_str());
+        Logger::log("Manufacturer: %s", addEvent->manufacturer.c_str());
+        Logger::log("Model: %s", addEvent->model.c_str());
+        Logger::log("Friendly name: %s", addEvent->name.c_str());
+        Logger::log();
+      } else if (EventPacket::unpackAs<DiscoveryRemoveEvent>(event)) {
+        Logger::log("===Discovery Remove Event===");
+        Logger::log("Camera ID: %s", container->id.c_str());
+        Logger::log();
+      }
+    }
   }
 
   return 0;

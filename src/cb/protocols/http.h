@@ -17,8 +17,8 @@ class HTTPMessage : public Packet,
   Buffer body;
 
   HTTPMessage()
-      : headerNamePacker({}, {": ", "\r\n"}),
-        headerValuePacker({}, {"\r\n"}),
+      : headerNamePacker({}, {":", "\r\n"}, " \t", true),
+        headerValuePacker({}, {"\r\n"}, " \t"),
         bodyField(std::make_unique<Vector<uint8_t, uint32_t>>(
                       std::make_unique<Primitive<uint8_t>>(),
                       contentLength),
@@ -85,6 +85,30 @@ class HTTPResponse : public HTTPMessage {
     field(this->statusText, {}, {"\r\n"});
   }
   HTTPResponse() : HTTPResponse("", "") {}
+};
+
+// This is a very fragile way to parse URL strings, but good enough for now
+class URL : public Packet {
+ public:
+  std::string protocol;
+  std::string hostname;
+  std::string port;
+  std::string path;
+  std::string query;
+  std::string fragment;
+
+  URL() {
+    field(this->protocol, {}, {"://"});
+    field(this->hostname, {}, {":", "/"}, "", false, true, false, false);
+    field(this->port, {":"}, {"/"}, "", false, false, false, false);
+    field(this->path, {}, {"?", "#"}, "", false, false, false, false);
+    field(this->query, {"?"}, {"#"}, "", false, false, false, false);
+    field(this->fragment, {"#"}, {}, "", false, false, false, false);
+  }
+
+  URL(std::string s) : URL() { unpackString(s); }
+
+  std::unique_ptr<HTTPResponse> request(std::unique_ptr<TCPSocket>& socket);
 };
 
 }  // namespace cb

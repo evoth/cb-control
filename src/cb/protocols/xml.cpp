@@ -115,17 +115,17 @@ XMLElement& XMLElement::getTagByName(std::string name) const {
   throw Exception(ExceptionContext::XML, ExceptionType::TagNotFound);
 }
 
-void XMLDocument::pack(Buffer& buffer, int& offset) {
+void XMLDoc::pack(Buffer& buffer, int& offset) {
   if (!declaration.empty())
     Packet::pack(buffer, offset);
   XMLElement::pack(buffer, offset);
 }
 
-void XMLDocument::unpack(const Buffer& buffer,
-                         int& offset,
-                         std::optional<int> limitOffset) {
+void XMLDoc::unpack(const Buffer& buffer,
+                    int& offset,
+                    std::optional<int> limitOffset) {
   Packet::unpack(buffer, offset, limitOffset);
   XMLElement::unpack(buffer, offset, limitOffset);
 }
 
-}
+}  // namespace cb

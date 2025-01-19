@@ -2,7 +2,6 @@
 #define CB_CONTROL_EVENT_H
 
 #include <cb/exception.h>
-#include <cb/logger.h>
 #include <cb/protocols/tcp.h>
 
 #include <mutex>
@@ -19,8 +18,6 @@ class EventEmitter {
   void pushEvent(std::unique_ptr<T> event) {
     std::lock_guard lock(eventsMutex);
     events.push(std::move(event));
-    Logger::log("New result event:");
-    Logger::log(*events.back());
   }
 
   template <typename U, typename... Args>
@@ -140,27 +137,27 @@ class SetPropEvent : public EventPacket {
 
 class DiscoveryAddEvent : public EventPacket {
  public:
-  uint16_t method = 0;
+  uint16_t methodCode = 0;
   std::string connectionAddress;
   std::string serialNumber;
   std::string manufacturer;
   std::string model;
   std::string name;
 
-  DiscoveryAddEvent(uint16_t method,
+  DiscoveryAddEvent(uint16_t methodCode,
                     std::string connectionAddress,
                     std::string serialNumber,
                     std::string manufacturer,
                     std::string model,
                     std::string name)
       : EventPacket(0x06),
-        method(method),
+        methodCode(methodCode),
         connectionAddress(connectionAddress),
         serialNumber(serialNumber),
         manufacturer(manufacturer),
         model(model),
         name(name) {
-    field(this->method);
+    field(this->methodCode);
     field(this->connectionAddress);
     field(this->serialNumber);
     field(this->manufacturer);

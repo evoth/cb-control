@@ -41,6 +41,7 @@ class XMLElement : public XMLNode {
                    {" ", "\r", "\n", "\t", ">", "/>"},
                    XML_WHITESPACE,
                    false,
+                   true,
                    true),
         attributeNamePacker({}, {"="}, XML_WHITESPACE),
         attributeValuePacker({"\"", "'"}, {"\"", "'"}, XML_WHITESPACE, true),
@@ -67,14 +68,14 @@ class XMLElement : public XMLNode {
   DelimitedString endPacker;
 };
 
-class XMLDocument : public XMLElement {
+class XMLDoc : public XMLElement {
  public:
   std::string declaration;
 
   using Packet::pack;
   using Packet::unpack;
 
-  XMLDocument() { field(this->declaration, {"<?xml"}, {"?>"}, XML_WHITESPACE); }
+  XMLDoc() { field(this->declaration, {"<?xml"}, {"?>"}, XML_WHITESPACE); }
 
   void pack(Buffer& buffer, int& offset) override;
   void unpack(const Buffer& buffer,

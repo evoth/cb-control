@@ -1,14 +1,9 @@
 #include <cb/factory.h>
 #include <cb/logger.h>
+#include <cb/platforms/socketImpl.h>
 
 #include "ptp/vendors/canon.h"
 #include "ptp/vendors/nikon.h"
-
-#if defined(_WIN32)
-#include <cb/platforms/windows/socket.h>
-#elif defined(ESP32)
-#include <cb/platforms/esp32/socket.h>
-#endif
 
 namespace cb {
 
@@ -30,23 +25,15 @@ std::unique_ptr<EventCamera> PTPCameraFactory::create() const {
   throw Exception(ExceptionContext::Factory, ExceptionType::UnsupportedCamera);
 }
 
-bool PTPIPFactory::isSupported() const {
-#if defined(_WIN32) || defined(ESP32)
-  return true;
-#else
-  return false;
-#endif
-}
-
 // TODO: Find a less weird preprocessor "control" flow for this
 std::unique_ptr<PTPTransport> PTPIPFactory::create() const {
 #if defined(_WIN32)
-  return std::make_unique<PTPIP>(std::make_unique<WindowsTCPSocket>(),
-                                 std::make_unique<WindowsTCPSocket>(),
-                                 clientGuid, clientName, ip);
+  return std::make_unique<PTPIP>(std::make_unique<TCPSocketImpl>(),
+                                 std::make_unique<TCPSocketImpl>(), clientGuid,
+                                 clientName, ip);
 #elif defined(ESP32)
-  return std::make_unique<PTPIP>(std::make_unique<ESP32TCPSocket>(),
-                                 std::make_unique<ESP32TCPSocket>(), clientGuid,
+  return std::make_unique<PTPIP>(std::make_unique<TCPSocketImpl>(),
+                                 std::make_unique<TCPSocketImpl>(), clientGuid,
                                  clientName, ip);
 #else
   throw Exception(ExceptionContext::Factory,
@@ -54,4 +41,4 @@ std::unique_ptr<PTPTransport> PTPIPFactory::create() const {
 #endif
 }
 
-}
+}  // namespace cb

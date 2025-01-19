@@ -9,9 +9,9 @@
 namespace cb {
 
 // TODO: Figure out error logging
-class ESP32TCPSocket : public TCPSocket, BufferedSocket {
+class TCPSocketImpl : public TCPSocket, BufferedSocket {
  public:
-  ~ESP32TCPSocket() { client.stop(); }
+  ~TCPSocketImpl() { client.stop(); }
 
   bool connect(const std::string& ip, int port) override {
     // TODO: Set socket options

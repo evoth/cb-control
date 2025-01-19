@@ -36,12 +36,14 @@ void WideString::unpack(std::string& value,
 }
 
 void DelimitedString::pack(std::string& value, Buffer& buffer, int& offset) {
+  if (value.empty() && !packEmpty)
+    return;
   if (!start.empty())
     for (char& c : start[0])
       packer.pack(c, buffer, offset);
   for (char& c : value)
     packer.pack(c, buffer, offset);
-  if (!end.empty())
+  if (!end.empty() && seekEnd)
     for (char& c : end[0])
       packer.pack(c, buffer, offset);
   if (!trimChars.empty() && packTrim)
@@ -90,8 +92,7 @@ void DelimitedString::unpack(std::string& value,
     }
   }
 
-  bool foundEnd = false;
-  while (offset < limit && !foundEnd) {
+  while (offset < limit) {
     packer.unpack(c, buffer, offset, limitOffset);
     value.push_back(c);
 
@@ -112,21 +113,27 @@ void DelimitedString::unpack(std::string& value,
       }
 
       if (eIt == e.rend()) {
-        foundEnd = true;
-        if (!keepEnd) {
-          while (valueIt != value.rend() &&
-                 trimChars.find(*valueIt) != std::string::npos)
-            valueIt++;
-          value.erase(value.size() - std::distance(value.rbegin(), valueIt));
+        while (valueIt != value.rend() &&
+               trimChars.find(*valueIt) != std::string::npos)
+          valueIt++;
+        int endDist = std::distance(value.rbegin(), valueIt);
+
+        if (!keepEnd)
+          value.erase(value.size() - endDist);
+
+        if (seekEnd) {
+          // TODO: Use unpack here instead of raw access
+          while (offset < limit &&
+                 trimChars.find(buffer[offset]) != std::string::npos)
+            offset++;
+        } else {
+          offset -= endDist;
         }
-        break;
+
+        return;
       }
     }
   }
-
-  // TODO: Use unpack here instead of raw access
-  while (offset < limit && trimChars.find(buffer[offset]) != std::string::npos)
-    offset++;
 }
 
 void NestedPacket::pack(Packet& value, Buffer& buffer, int& offset) {
@@ -178,4 +185,4 @@ void Packet::unpack(const Buffer& buffer) {
   unpack(buffer, offset);
 };
 
-}
+}  // namespace cb
