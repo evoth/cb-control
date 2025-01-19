@@ -6,7 +6,7 @@ SRCDIR = src
 OBJDIR = obj
 LDFLAGS = -g
 LDLIBS = -LC:\MinGW\lib -lws2_32
-INC=-Iinclude
+INC=-Isrc
 
 RM = del /f
 MKDIR = powershell.exe 'md -Force $(1) | Out-Null'
