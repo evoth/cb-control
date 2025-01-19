@@ -16,13 +16,6 @@ std::unique_ptr<EventContainer> SSDPDiscovery::popEvent() {
   return EventProxy<EventContainer>::popEvent();
 }
 
-void SSDPDiscovery::pushAndReceive(std::string containerId,
-                                   std::unique_ptr<EventPacket> event) {
-  pushEvent<EventContainer>(containerId, std::vector<Buffer>{event->pack()});
-  receiveEvent(std::make_unique<EventContainer>(
-      containerId, std::vector<Buffer>{event->pack()}));
-}
-
 void SSDPDiscovery::getEvents() {
   HTTPRequest request;
   while (request.recv(*udpSocket, 0)) {
@@ -48,7 +41,7 @@ void SSDPDiscovery::getEvents() {
       auto xmlResponse = URL(request.headers["Location"]).request(tcpSocket);
       XMLDoc deviceDesc;
       deviceDesc.unpack(xmlResponse->body);
-      XMLElement& device = deviceDesc["device"];
+      const XMLElement& device = deviceDesc["device"];
 
       // Push DiscoveryAddEvent
       auto addEvent = std::make_unique<DiscoveryAddEvent>(

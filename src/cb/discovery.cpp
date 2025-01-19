@@ -18,4 +18,11 @@ void DiscoveryService::receiveEvent(std::unique_ptr<EventContainer> container) {
   }
 }
 
+void DiscoveryService::pushAndReceive(std::string containerId,
+                                      std::unique_ptr<EventPacket> event) {
+  pushEvent<EventContainer>(containerId, std::vector<Buffer>{event->pack()});
+  receiveEvent(std::make_unique<EventContainer>(
+      containerId, std::vector<Buffer>{event->pack()}));
 }
+
+}  // namespace cb

@@ -64,9 +64,6 @@ class SSDPDiscovery : public DiscoveryService {
   std::array<uint8_t, 16> clientGuid;
   std::string clientName;
   std::map<std::string, SSDPAdvertisementData> advertisements;
-
-  void pushAndReceive(std::string containerId,
-                      std::unique_ptr<EventPacket> event);
 };
 
 }  // namespace cb

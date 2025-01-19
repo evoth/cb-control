@@ -36,6 +36,8 @@ class XMLElement : public XMLNode {
   std::map<std::string, std::string> attributes;
   std::vector<std::unique_ptr<XMLNode>> children;
 
+  static const XMLElement notFound;
+
   XMLElement()
       : namePacker({"<"},
                    {" ", "\r", "\n", "\t", ">", "/>"},
@@ -56,8 +58,10 @@ class XMLElement : public XMLNode {
   operator std::string() const;
 
   bool containsTag(std::string name) const;
-  XMLElement& getTagByName(std::string name) const;
-  XMLElement& operator[](std::string name) const { return getTagByName(name); }
+  const XMLElement& getTagByName(std::string name) const;
+  const XMLElement& operator[](std::string name) const {
+    return getTagByName(name);
+  }
 
  private:
   Primitive<char> charPacker;

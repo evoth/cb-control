@@ -20,6 +20,8 @@ void XMLText::unpack(const Buffer& buffer,
   }
 }
 
+const XMLElement XMLElement::notFound;
+
 void XMLElement::pack(Buffer& buffer, int& offset) {
   namePacker.pack(name, buffer, offset);
 
@@ -105,14 +107,14 @@ bool XMLElement::containsTag(std::string name) const {
   return false;
 }
 
-XMLElement& XMLElement::getTagByName(std::string name) const {
+const XMLElement& XMLElement::getTagByName(std::string name) const {
   for (auto& child : children) {
     if (auto element = dynamic_cast<XMLElement*>(child.get())) {
       if (element->name == name)
         return *element;
     }
   }
-  throw Exception(ExceptionContext::XML, ExceptionType::TagNotFound);
+  return notFound;
 }
 
 void XMLDoc::pack(Buffer& buffer, int& offset) {

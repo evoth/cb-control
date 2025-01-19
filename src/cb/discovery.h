@@ -27,6 +27,9 @@ class DiscoveryService : public EventProxy<EventContainer> {
            connectionAddress;
   }
 
+  void pushAndReceive(std::string containerId,
+                      std::unique_ptr<EventPacket> event);
+
  private:
   std::map<std::string, std::unique_ptr<CameraProxy>>& cameras;
   DiscoveryMethod discoveryMethod;
