@@ -17,12 +17,13 @@ std::unique_ptr<EventContainer> SSDPDiscovery::popEvent() {
 }
 
 void SSDPDiscovery::getEvents() {
+  // Listen for NOTIFY messages on multicast socket
   HTTPRequest request;
-  while (request.recv(*udpSocket, 0)) {
+  while (request.recv(*multicastSocket, 0)) {
     if (request.method != "NOTIFY")
       continue;
 
-    std::string ip = udpSocket->getRemoteIp();
+    std::string ip = multicastSocket->getPacketIp();
     std::string serviceName = request.headers["NT"];
     if (!searchTargets.contains(serviceName))
       continue;
@@ -36,34 +37,21 @@ void SSDPDiscovery::getEvents() {
       continue;
     }
 
-    if (!advertisements.contains(serviceName)) {
-      // New advertisement; request/parse DeviceDesc
-      auto xmlResponse = URL(request.headers["Location"]).request(tcpSocket);
-      XMLDoc deviceDesc;
-      deviceDesc.unpack(xmlResponse->body);
-      const XMLElement& device = deviceDesc["device"];
+    processAdvertisement(request, ip, serviceName);
+  }
 
-      // Push DiscoveryAddEvent
-      auto addEvent = std::make_unique<DiscoveryAddEvent>(
-          static_cast<int>(DiscoveryMethod::SSDP), ip, device["serialNumber"],
-          device["manufacturer"], device["modelName"], device["friendlyName"]);
-      pushAndReceive(createId(ip), std::move(addEvent));
-    }
+  // Listen for OK responses on unicast socket
+  HTTPResponse response;
+  while (response.recv(*unicastSocket, 0)) {
+    if (response.statusCode != "200")
+      continue;
 
-    // Keep track of time and IP of advertisement
-    advertisements[serviceName] = {std::chrono::steady_clock::now(), ip};
+    std::string ip = unicastSocket->getPacketIp();
+    std::string serviceName = response.headers["ST"];
+    if (!searchTargets.contains(serviceName))
+      continue;
 
-    // Hacky way to get Cache-Control seconds value
-    std::string durationStr = "";
-    size_t durationStart = request.headers["Cache-Control"].find("=");
-    if (durationStart != std::string::npos)
-      durationStr = request.headers["Cache-Control"].substr(durationStart + 1);
-
-    // Add max seconds value to expiration time
-    if (!durationStr.empty()) {
-      advertisements[serviceName].expirationTime +=
-          std::chrono::seconds(std::stoi(durationStr));
-    }
+    processAdvertisement(response, ip, serviceName);
   }
 
   // Remove expired advertisements
@@ -76,6 +64,39 @@ void SSDPDiscovery::getEvents() {
     } else {
       ++it;
     }
+  }
+}
+
+void SSDPDiscovery::processAdvertisement(HTTPMessage& message,
+                                         std::string ip,
+                                         std::string serviceName) {
+  if (!advertisements.contains(serviceName)) {
+    // New advertisement; request/parse DeviceDesc
+    auto xmlResponse = URL(message.headers["Location"]).request(tcpSocket);
+    XMLDoc deviceDesc;
+    deviceDesc.unpack(xmlResponse->body);
+    const XMLElement& device = deviceDesc["device"];
+
+    // Push DiscoveryAddEvent
+    auto addEvent = std::make_unique<DiscoveryAddEvent>(
+        static_cast<int>(DiscoveryMethod::SSDP), ip, device["serialNumber"],
+        device["manufacturer"], device["modelName"], device["friendlyName"]);
+    pushAndReceive(createId(ip), std::move(addEvent));
+  }
+
+  // Keep track of time and IP of advertisement
+  advertisements[serviceName] = {std::chrono::steady_clock::now(), ip};
+
+  // Hacky way to get Cache-Control seconds value
+  std::string durationStr = "";
+  size_t durationStart = message.headers["Cache-Control"].find("=");
+  if (durationStart != std::string::npos)
+    durationStr = message.headers["Cache-Control"].substr(durationStart + 1);
+
+  // Add max seconds value to expiration time
+  if (!durationStr.empty()) {
+    advertisements[serviceName].expirationTime +=
+        std::chrono::seconds(std::stoi(durationStr));
   }
 }
 

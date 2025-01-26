@@ -10,7 +10,7 @@ namespace cb {
 
 class HTTPMessage : public Packet,
                     public Sendable<TCPSocket>,
-                    public Sendable<UDPMulticastSocket> {
+                    public Sendable<UDPSocket> {
  public:
   std::string httpVersion = "HTTP/1.1";
   std::map<std::string, std::string> headers;
@@ -41,11 +41,11 @@ class HTTPMessage : public Packet,
     return recv(socket, buffer, timeoutMs);
   }
 
-  int send(UDPMulticastSocket& socket) override;
-  int recv(UDPMulticastSocket& socket,
+  int send(UDPSocket& socket) override;
+  int recv(UDPSocket& socket,
            Buffer& buffer,
            unsigned int timeoutMs = 10000) override;
-  int recv(UDPMulticastSocket& socket, unsigned int timeoutMs = 10000) {
+  int recv(UDPSocket& socket, unsigned int timeoutMs = 10000) {
     Buffer buffer;
     return recv(socket, buffer, timeoutMs);
   }

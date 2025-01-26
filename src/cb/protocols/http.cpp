@@ -83,12 +83,12 @@ int HTTPMessage::recv(TCPSocket& socket,
   return buffer.size();
 }
 
-int HTTPMessage::send(UDPMulticastSocket& socket) {
+int HTTPMessage::send(UDPSocket& socket) {
   Buffer buffer = pack();
   return socket.sendAttempt(buffer);
 }
 
-int HTTPMessage::recv(UDPMulticastSocket& socket,
+int HTTPMessage::recv(UDPSocket& socket,
                       Buffer& buffer,
                       unsigned int timeoutMs) {
   buffer.clear();

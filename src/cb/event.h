@@ -102,17 +102,17 @@ class ExceptionEvent : public EventPacket {
 
 class ConnectEvent : public EventPacket {
  public:
-  bool isConnected = false;
+  ConnectEvent() : EventPacket(0x03) {}
+};
 
-  ConnectEvent(bool isConnected) : EventPacket(0x03), isConnected(isConnected) {
-    field(this->isConnected);
-  }
-  ConnectEvent() : ConnectEvent(false) {}
+class DisconnectEvent : public EventPacket {
+ public:
+  DisconnectEvent() : EventPacket(0x04) {}
 };
 
 class CaptureEvent : public EventPacket {
  public:
-  CaptureEvent() : EventPacket(0x04) {}
+  CaptureEvent() : EventPacket(0x05) {}
 };
 
 class SetPropEvent : public EventPacket {
@@ -124,7 +124,7 @@ class SetPropEvent : public EventPacket {
   SetPropEvent(uint16_t propCode,
                uint32_t valueNumerator,
                uint32_t valueDenominator)
-      : EventPacket(0x05),
+      : EventPacket(0x06),
         propCode(propCode),
         valueNumerator(valueNumerator),
         valueDenominator(valueDenominator) {
@@ -150,7 +150,7 @@ class DiscoveryAddEvent : public EventPacket {
                     std::string manufacturer,
                     std::string model,
                     std::string name)
-      : EventPacket(0x06),
+      : EventPacket(0x07),
         methodCode(methodCode),
         connectionAddress(connectionAddress),
         serialNumber(serialNumber),
@@ -169,7 +169,7 @@ class DiscoveryAddEvent : public EventPacket {
 
 class DiscoveryRemoveEvent : public EventPacket {
  public:
-  DiscoveryRemoveEvent() : EventPacket(0x07) {}
+  DiscoveryRemoveEvent() : EventPacket(0x08) {}
 };
 
 }  // namespace cb

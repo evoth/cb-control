@@ -29,25 +29,31 @@ struct SSDPAdvertisementData {
 class SSDPDiscovery : public DiscoveryService {
  public:
   SSDPDiscovery(std::map<std::string, std::unique_ptr<CameraProxy>>& cameras,
-                std::unique_ptr<UDPMulticastSocket> udpSocket,
+                std::unique_ptr<UDPSocket> unicastSocket,
+                std::unique_ptr<UDPSocket> multicastSocket,
                 std::unique_ptr<TCPSocket> tcpSocket,
                 std::set<std::string> searchTargets,
                 std::array<uint8_t, 16> clientGuid,
                 std::string clientName)
       : DiscoveryService(cameras, DiscoveryMethod::SSDP),
-        udpSocket(std::move(udpSocket)),
+        unicastSocket(std::move(unicastSocket)),
+        multicastSocket(std::move(multicastSocket)),
         tcpSocket(std::move(tcpSocket)),
         searchTargets(searchTargets),
         clientGuid(clientGuid),
         clientName(clientName) {
-    // TODO: Fix port binding and listen for UDP unicast responses
-    this->udpSocket->begin("239.255.255.250", 1900);
+    this->unicastSocket->begin("239.255.255.250", 1900, false);
+    this->multicastSocket->begin("239.255.255.250", 1900, true);
     for (const std::string& searchTarget : searchTargets) {
-      SSDPSearchMessage(searchTarget).send(*this->udpSocket);
+      SSDPSearchMessage(searchTarget).send(*this->unicastSocket);
     }
   }
 
-  ~SSDPDiscovery() { udpSocket->close(); }
+  ~SSDPDiscovery() {
+    unicastSocket->close();
+    multicastSocket->close();
+    tcpSocket->close();
+  }
 
   std::unique_ptr<CameraProxy> createCamera(
       std::unique_ptr<DiscoveryAddEvent> addEvent) override;
@@ -58,12 +64,17 @@ class SSDPDiscovery : public DiscoveryService {
   void getEvents() override;
 
  private:
-  std::unique_ptr<UDPMulticastSocket> udpSocket;
+  std::unique_ptr<UDPSocket> unicastSocket;
+  std::unique_ptr<UDPSocket> multicastSocket;
   std::unique_ptr<TCPSocket> tcpSocket;
   std::set<std::string> searchTargets;
   std::array<uint8_t, 16> clientGuid;
   std::string clientName;
   std::map<std::string, SSDPAdvertisementData> advertisements;
+
+  void processAdvertisement(HTTPMessage& message,
+                            std::string ip,
+                            std::string serviceName);
 };
 
 }  // namespace cb

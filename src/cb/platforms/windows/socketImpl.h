@@ -109,13 +109,14 @@ class TCPSocketImpl : public TCPSocket, WindowsSocket {
 };
 
 // TODO: Send/listen on all available interfaces ("multi-homed" control point)
-class UDPMulticastSocketImpl : public UDPMulticastSocket, WindowsSocket {
+class UDPSocketImpl : public UDPSocket, WindowsSocket {
  public:
-  UDPMulticastSocketImpl() : BufferedSocket(1460) {}
+  UDPSocketImpl() : BufferedSocket(1460) {}
 
-  bool begin(const std::string& ip, int port) override {
+  bool begin(const std::string& ip, int port, bool multicast) override {
     remoteIp = ip;
     remotePort = port;
+    this->multicast = multicast;
 
     close();  // TODO: is this needed?
 
@@ -123,10 +124,19 @@ class UDPMulticastSocketImpl : public UDPMulticastSocket, WindowsSocket {
     if (clientSocket == INVALID_SOCKET)
       return false;
 
+    BOOL bOptVal = TRUE;
+    int bOptLen = sizeof(BOOL);
+
+    if (setsockopt(clientSocket, SOL_SOCKET, SO_REUSEADDR,
+                   (const char*)&bOptVal, sizeof(bOptLen)) == SOCKET_ERROR) {
+      close();
+      return false;
+    }
+
     SOCKADDR_IN serverAddress;
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-    serverAddress.sin_port = htons(remotePort);
+    serverAddress.sin_port = htons(multicast ? remotePort : 0);
 
     if (bind(clientSocket, (SOCKADDR*)&serverAddress, sizeof(serverAddress)) ==
         SOCKET_ERROR) {
@@ -134,35 +144,41 @@ class UDPMulticastSocketImpl : public UDPMulticastSocket, WindowsSocket {
       return false;
     }
 
-    IP_MREQ imr;
-    imr.imr_multiaddr.s_addr = inet_addr(remoteIp.c_str());
-    imr.imr_interface.s_addr = htonl(INADDR_ANY);
+    if (multicast) {
+      IP_MREQ imr;
+      imr.imr_multiaddr.s_addr = inet_addr(remoteIp.c_str());
+      imr.imr_interface.s_addr = htonl(INADDR_ANY);
 
-    if (setsockopt(clientSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP,
-                   (const char*)&imr, sizeof(imr)) == SOCKET_ERROR) {
-      close();
-      return false;
+      if (setsockopt(clientSocket, IPPROTO_IP, IP_ADD_MEMBERSHIP,
+                     (const char*)&imr, sizeof(imr)) == SOCKET_ERROR) {
+        close();
+        return false;
+      }
     }
 
     return true;
   }
 
   bool close() override {
-    IP_MREQ imr;
-    imr.imr_multiaddr.s_addr = inet_addr(remoteIp.c_str());
-    imr.imr_interface.s_addr = htonl(INADDR_ANY);
+    bool failure = false;
 
-    bool failure = setsockopt(clientSocket, IPPROTO_IP, IP_DROP_MEMBERSHIP,
-                              (const char*)&imr, sizeof(imr)) == SOCKET_ERROR;
+    if (multicast) {
+      IP_MREQ imr;
+      imr.imr_multiaddr.s_addr = inet_addr(remoteIp.c_str());
+      imr.imr_interface.s_addr = htonl(INADDR_ANY);
+
+      failure |= setsockopt(clientSocket, IPPROTO_IP, IP_DROP_MEMBERSHIP,
+                            (const char*)&imr, sizeof(imr)) == SOCKET_ERROR;
+    }
 
     failure |= closesocket(clientSocket) == SOCKET_ERROR;
     clientSocket = INVALID_SOCKET;
     return failure;
   }
 
-  std::string getRemoteIp() const override { return remoteIp; }
+  std::string getPacketIp() const override { return packetIp; }
 
-  int getRemotePort() const override { return remotePort; }
+  int getPacketPort() const override { return packetPort; }
 
  protected:
   int send(const char* buff, int length) override {
@@ -191,8 +207,8 @@ class UDPMulticastSocketImpl : public UDPMulticastSocket, WindowsSocket {
 
     char ipString[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &sendAddress.sin_addr, ipString, sizeof(ipString));
-    remoteIp = ipString;
-    remotePort = ntohs(sendAddress.sin_port);
+    packetIp = ipString;
+    packetPort = ntohs(sendAddress.sin_port);
 
     if (result == SOCKET_ERROR)
       return BUFFERED_SOCKET_ERROR;
@@ -200,8 +216,11 @@ class UDPMulticastSocketImpl : public UDPMulticastSocket, WindowsSocket {
   }
 
  private:
+  bool multicast = false;
   std::string remoteIp;
+  std::string packetIp;
   int remotePort = 0;
+  int packetPort = 0;
 };
 
 }  // namespace cb

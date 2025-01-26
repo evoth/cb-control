@@ -8,11 +8,11 @@ void CameraProxy::sendEvent(std::unique_ptr<EventPacket> event) {
 }
 
 void CameraProxy::connect() {
-  sendEvent(std::make_unique<ConnectEvent>(true));
+  sendEvent(std::make_unique<ConnectEvent>());
 }
 
 void CameraProxy::disconnect() {
-  sendEvent(std::make_unique<ConnectEvent>(false));
+  sendEvent(std::make_unique<DisconnectEvent>());
 }
 
 void CameraProxy::capture() {
@@ -60,23 +60,19 @@ std::unique_ptr<EventContainer> CameraWrapper::popEvent() {
 void CameraWrapper::handleEvent(const Buffer& event) {
   getEvents();
   // TODO: Check state to see if action is needed
-  if (auto connectEvent = EventPacket::unpackAs<ConnectEvent>(event)) {
-    if (connectEvent->isConnected) {
-      // Attempt to connect camera
-      if (!camera)
-        camera = cameraFactory->create();
-      if (camera)
-        camera->connect();
-    } else {
-      // Attempt to disconnect camera
-      if (camera)
-        camera->disconnect();
-      else
-        pushCameraEvent<ConnectEvent>(false);
-    }
+  if (EventPacket::unpackAs<ConnectEvent>(event)) {
+    if (!camera)
+      camera = cameraFactory->create();
+    if (camera)
+      camera->connect();
+  } else if (EventPacket::unpackAs<DisconnectEvent>(event)) {
+    if (camera)
+      camera->disconnect();
+    else
+      pushCameraEvent<ConnectEvent>();
   } else if (!camera) {
     // Camera is required for other actions; push disconnect event if nullptr
-    pushCameraEvent<ConnectEvent>(false);
+    pushCameraEvent<DisconnectEvent>();
   } else if (EventPacket::unpackAs<CaptureEvent>(event)) {
     camera->capture();
   } else if (auto setPropEvent = EventPacket::unpackAs<SetPropEvent>(event)) {
@@ -103,4 +99,4 @@ void CameraWrapper::receiveEvent(std::unique_ptr<EventContainer> container) {
   }
 }
 
-}
+}  // namespace cb
