@@ -28,14 +28,13 @@ struct SSDPAdvertisementData {
 
 class SSDPDiscovery : public DiscoveryService {
  public:
-  SSDPDiscovery(std::map<std::string, std::unique_ptr<CameraProxy>>& cameras,
-                std::unique_ptr<UDPSocket> unicastSocket,
+  SSDPDiscovery(std::unique_ptr<UDPSocket> unicastSocket,
                 std::unique_ptr<UDPSocket> multicastSocket,
                 std::unique_ptr<TCPSocket> tcpSocket,
                 std::set<std::string> searchTargets,
                 std::array<uint8_t, 16> clientGuid,
                 std::string clientName)
-      : DiscoveryService(cameras, DiscoveryMethod::SSDP),
+      : DiscoveryService(DiscoveryMethod::SSDP),
         unicastSocket(std::move(unicastSocket)),
         multicastSocket(std::move(multicastSocket)),
         tcpSocket(std::move(tcpSocket)),

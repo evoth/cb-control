@@ -10,16 +10,13 @@ enum class DiscoveryMethod {
   SSDP,
 };
 
-class DiscoveryService : public EventProxy<EventContainer> {
+class DiscoveryService : public EventEmitter<EventContainer> {
  public:
-  DiscoveryService(std::map<std::string, std::unique_ptr<CameraProxy>>& cameras,
-                   DiscoveryMethod discoveryMethod)
-      : cameras(cameras), discoveryMethod(discoveryMethod) {}
+  DiscoveryService(DiscoveryMethod discoveryMethod)
+      : discoveryMethod(discoveryMethod) {}
 
   virtual std::unique_ptr<CameraProxy> createCamera(
       std::unique_ptr<DiscoveryAddEvent> addEvent) = 0;
-
-  void receiveEvent(std::unique_ptr<EventContainer> event) override;
 
  protected:
   std::string createId(std::string connectionAddress) {
@@ -27,11 +24,7 @@ class DiscoveryService : public EventProxy<EventContainer> {
            connectionAddress;
   }
 
-  void pushAndReceive(std::string containerId,
-                      std::unique_ptr<EventPacket> event);
-
  private:
-  std::map<std::string, std::unique_ptr<CameraProxy>>& cameras;
   DiscoveryMethod discoveryMethod;
 };
 

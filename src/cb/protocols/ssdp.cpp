@@ -13,7 +13,7 @@ std::unique_ptr<CameraProxy> SSDPDiscovery::createCamera(
 
 std::unique_ptr<EventContainer> SSDPDiscovery::popEvent() {
   getEvents();
-  return EventProxy<EventContainer>::popEvent();
+  return EventEmitter<EventContainer>::popEvent();
 }
 
 void SSDPDiscovery::getEvents() {
@@ -30,7 +30,8 @@ void SSDPDiscovery::getEvents() {
 
     // Remove camera on ssdp:byebye
     if (request.headers["NTS"] == "ssdp:byebye") {
-      pushAndReceive(createId(ip), std::make_unique<DiscoveryRemoveEvent>());
+      pushEvent<EventContainer>(
+          createId(ip), std::vector<Buffer>{DiscoveryRemoveEvent().pack()});
       advertisements.erase(serviceName);
       continue;
     } else if (request.headers["NTS"] != "ssdp:alive") {
@@ -58,8 +59,9 @@ void SSDPDiscovery::getEvents() {
   auto now = std::chrono::steady_clock::now();
   for (auto it = advertisements.begin(); it != advertisements.end();) {
     if (it->second.expirationTime < now) {
-      pushAndReceive(createId(it->second.ip),
-                     std::make_unique<DiscoveryRemoveEvent>());
+      pushEvent<EventContainer>(
+          createId(it->second.ip),
+          std::vector<Buffer>{DiscoveryRemoveEvent().pack()});
       it = advertisements.erase(it);
     } else {
       ++it;
@@ -78,10 +80,12 @@ void SSDPDiscovery::processAdvertisement(HTTPMessage& message,
     const XMLElement& device = deviceDesc["device"];
 
     // Push DiscoveryAddEvent
-    auto addEvent = std::make_unique<DiscoveryAddEvent>(
-        static_cast<int>(DiscoveryMethod::SSDP), ip, device["serialNumber"],
-        device["manufacturer"], device["modelName"], device["friendlyName"]);
-    pushAndReceive(createId(ip), std::move(addEvent));
+    DiscoveryAddEvent addEvent(static_cast<int>(DiscoveryMethod::SSDP), ip,
+                               device["serialNumber"], device["manufacturer"],
+                               device["modelName"], device["friendlyName"]);
+
+    pushEvent<EventContainer>(createId(ip),
+                              std::vector<Buffer>{addEvent.pack()});
   }
 
   // Keep track of time and IP of advertisement

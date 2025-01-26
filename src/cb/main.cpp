@@ -8,13 +8,12 @@
 int main() {
   using namespace cb;
 
-  std::map<std::string, std::unique_ptr<CameraProxy>> cameras;
   const std::array<uint8_t, 16> guid = {'C', 'a', 'p', 't', 'u', 'r', 'e', 'B',
                                         'e', 'a', 'm', 'P', 'T', 'P', 'I', 'P'};
 
   SSDPDiscovery ssdp(
-      cameras, std::make_unique<UDPSocketImpl>(),
-      std::make_unique<UDPSocketImpl>(), std::make_unique<TCPSocketImpl>(),
+      std::make_unique<UDPSocketImpl>(), std::make_unique<UDPSocketImpl>(),
+      std::make_unique<TCPSocketImpl>(),
       {"urn:schemas-canon-com:service:ICPO-SmartPhoneEOSSystemService:1"}, guid,
       "CaptureBeam");
 
@@ -27,9 +26,7 @@ int main() {
         continue;
       for (const Buffer& event : container->events) {
         if (auto addEvent = EventPacket::unpackAs<DiscoveryAddEvent>(event)) {
-          camera = std::move(cameras[container->id]);
-          cameras.erase(
-              container->id);  // TODO: Make way to remove advertisement as well
+          camera = ssdp.createCamera(std::move(addEvent));
         }
       }
     }

@@ -6,9 +6,6 @@
 namespace cb {
 
 // TODO: Automatically listen on all interfaces
-// TODO: Send from automatically assigned IP?
-// TODO: Unicast (make separate interface or provide multicast flag or even a
-// list of multicast groups to join?)
 class UDPSocket : public virtual Socket {
  public:
   virtual bool begin(
