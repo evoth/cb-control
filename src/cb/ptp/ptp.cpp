@@ -121,8 +121,8 @@ void PTPCamera::startEventThread() {
           break;
         }
         getNewEvents();
-      } catch (Exception& e) {
-        pushEvent(std::make_unique<ExceptionEvent>(e));
+      } catch (const Exception& e) {
+        dispatchException(e);
       }
 
       // TODO: Make this adjustable
@@ -158,4 +158,4 @@ bool PTPCamera::isPropSupported(uint16_t propertyCode) {
       propertyCode, static_cast<uint32_t>(vendorExtensionId));
 }
 
-}
+}  // namespace cb

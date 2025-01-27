@@ -53,7 +53,12 @@ class Camera {
   virtual void setProp(CameraProp prop, CameraPropValue value) = 0;
 };
 
-class EventCamera : public Camera, public EventManager<CameraEvent> {};
+class EventCamera : public Camera, public EventManager<CameraEvent> {
+ public:
+  EventCamera() {
+    onException([this](const Exception& e) { pushEvent<ExceptionEvent>(e); });
+  }
+};
 
 }  // namespace cb
 

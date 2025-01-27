@@ -24,18 +24,3 @@ class CameraManager : public EventManager<EventContainer> {
 }  // namespace cb
 
 #endif
-
-// onEvent<EventContainer>(
-//         [this](const std::unique_ptr<EventContainer>& container) {
-//           if (container->id != id)
-//             return;
-
-//           for (const Buffer& event : container->events) {
-//             try {
-//               getNewEvents();
-//               dispatchEvent(event);
-//             } catch (Exception& e) {
-//               pushCameraEvent(std::make_unique<ExceptionEvent>(e));
-//             }
-//           }
-//         });

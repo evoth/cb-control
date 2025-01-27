@@ -16,9 +16,21 @@ int main() {
        'I', 'P'},
       "CaptureBeam");
 
+  ssdp.onException([](const Exception& exception) {
+    Logger::log("SSDP exception (context=%d, type=%d)",
+                static_cast<int>(exception.context),
+                static_cast<int>(exception.type));
+  });
+
   ssdp.onEvent<DiscoveryAddEvent>(
       [&ssdp](const std::unique_ptr<DiscoveryAddEvent>& addEvent) {
         auto camera = ssdp.createCamera(addEvent);
+
+        camera->onException([](const Exception& exception) {
+          Logger::log("Camera exception (context=%d, type=%d)",
+                      static_cast<int>(exception.context),
+                      static_cast<int>(exception.type));
+        });
 
         Logger::log("Connecting to camera...");
         camera->connect();

@@ -145,7 +145,7 @@ class ExceptionEvent : public CameraEvent {
   }
   ExceptionEvent() : ExceptionEvent(0, 0) {}
 
-  ExceptionEvent(Exception& e)
+  ExceptionEvent(const Exception& e)
       : ExceptionEvent(static_cast<uint16_t>(e.context),
                        static_cast<uint16_t>(e.type)) {}
 };
