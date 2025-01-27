@@ -56,7 +56,7 @@ class SSDPDiscovery : public DiscoveryService {
   std::unique_ptr<CameraProxy> createCamera(
       const std::unique_ptr<DiscoveryAddEvent>& addEvent) override;
 
-  std::unique_ptr<EventContainer> popEvent() override;
+  std::unique_ptr<DiscoveryEvent> popEvent() override;
 
  protected:
   void getNewEvents() override;

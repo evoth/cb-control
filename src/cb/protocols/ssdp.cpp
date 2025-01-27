@@ -11,9 +11,9 @@ std::unique_ptr<CameraProxy> SSDPDiscovery::createCamera(
                                          addEvent->connectionAddress);
 }
 
-std::unique_ptr<EventContainer> SSDPDiscovery::popEvent() {
+std::unique_ptr<DiscoveryEvent> SSDPDiscovery::popEvent() {
   getNewEvents();
-  return EventEmitter<EventContainer>::popEvent();
+  return EventEmitter<DiscoveryEvent>::popEvent();
 }
 
 void SSDPDiscovery::getNewEvents() {
@@ -30,8 +30,8 @@ void SSDPDiscovery::getNewEvents() {
 
     // Remove camera on ssdp:byebye
     if (request.headers["NTS"] == "ssdp:byebye") {
-      pushEvent<EventContainer>(
-          createId(ip), std::vector<Buffer>{DiscoveryRemoveEvent().pack()});
+      pushEvent<DiscoveryRemoveEvent>(static_cast<uint16_t>(discoveryMethod),
+                                      ip);
       advertisements.erase(serviceName);
       continue;
     } else if (request.headers["NTS"] != "ssdp:alive") {
@@ -59,9 +59,8 @@ void SSDPDiscovery::getNewEvents() {
   auto now = std::chrono::steady_clock::now();
   for (auto it = advertisements.begin(); it != advertisements.end();) {
     if (it->second.expirationTime < now) {
-      pushEvent<EventContainer>(
-          createId(it->second.ip),
-          std::vector<Buffer>{DiscoveryRemoveEvent().pack()});
+      pushEvent<DiscoveryRemoveEvent>(static_cast<uint16_t>(discoveryMethod),
+                                      it->second.ip);
       it = advertisements.erase(it);
     } else {
       ++it;
@@ -81,13 +80,9 @@ void SSDPDiscovery::processAdvertisement(HTTPMessage& message,
     deviceDesc.unpack(xmlResponse->body);
     const XMLElement& device = deviceDesc["device"];
 
-    // Push DiscoveryAddEvent
-    DiscoveryAddEvent addEvent(static_cast<int>(DiscoveryMethod::SSDP), ip,
-                               device["serialNumber"], device["manufacturer"],
-                               device["modelName"], device["friendlyName"]);
-
-    pushEvent<EventContainer>(createId(ip),
-                              std::vector<Buffer>{addEvent.pack()});
+    pushEvent<DiscoveryAddEvent>(static_cast<int>(discoveryMethod), ip,
+                                 device["serialNumber"], device["manufacturer"],
+                                 device["modelName"], device["friendlyName"]);
   }
 
   // Keep track of time and IP of advertisement

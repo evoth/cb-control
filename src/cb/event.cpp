@@ -42,9 +42,6 @@ void EventDispatcher::dispatchEvent(std::unique_ptr<EventPacket> event) {
 }
 
 void EventDispatcher::dispatchException(const Exception& e) {
-  if (exceptionHandlers.empty())
-    throw e;
-
   for (auto it = exceptionHandlers.begin(); it != exceptionHandlers.end();) {
     it->second.call(e);
 

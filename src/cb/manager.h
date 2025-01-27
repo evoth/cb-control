@@ -7,11 +7,9 @@
 
 namespace cb {
 
-class CameraManager : public EventEmitter<EventContainer> {
+class CameraManager : public EventEmitter<EventPacket> {
  public:
-  std::unique_ptr<EventContainer> popEvent() override;
-
-  // void receiveEvent(std::unique_ptr<EventContainer> event) override;
+  std::unique_ptr<EventPacket> popEvent() override;
 
  protected:
   void getNewEvents() override;

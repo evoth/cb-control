@@ -93,10 +93,25 @@ class SetPropEvent : public CameraEvent {
   SetPropEvent() : SetPropEvent(0, 0, 0) {}
 };
 
-class DiscoveryAddEvent : public EventPacket {
+class DiscoveryEvent : public virtual EventPacket {
  public:
   uint16_t methodCode = 0;
   std::string connectionAddress;
+
+  DiscoveryEvent(uint16_t methodCode, std::string connectionAddress)
+      : methodCode(methodCode), connectionAddress(connectionAddress) {
+    field(this->methodCode);
+    field(this->connectionAddress);
+  }
+  DiscoveryEvent() : DiscoveryEvent(0, "") {}
+
+  std::string createId(std::string connectionAddress) {
+    return std::to_string(methodCode) + "|" + connectionAddress;
+  }
+};
+
+class DiscoveryAddEvent : public DiscoveryEvent {
+ public:
   std::string serialNumber;
   std::string manufacturer;
   std::string model;
@@ -109,14 +124,11 @@ class DiscoveryAddEvent : public EventPacket {
                     std::string model,
                     std::string name)
       : EventPacket(0x07),
-        methodCode(methodCode),
-        connectionAddress(connectionAddress),
+        DiscoveryEvent(methodCode, connectionAddress),
         serialNumber(serialNumber),
         manufacturer(manufacturer),
         model(model),
         name(name) {
-    field(this->methodCode);
-    field(this->connectionAddress);
     field(this->serialNumber);
     field(this->manufacturer);
     field(this->model);
@@ -125,9 +137,11 @@ class DiscoveryAddEvent : public EventPacket {
   DiscoveryAddEvent() : DiscoveryAddEvent(0, "", "", "", "", "") {}
 };
 
-class DiscoveryRemoveEvent : public EventPacket {
+class DiscoveryRemoveEvent : public DiscoveryEvent {
  public:
-  DiscoveryRemoveEvent() : EventPacket(0x08) {}
+  DiscoveryRemoveEvent(uint16_t methodCode, std::string connectionAddress)
+      : EventPacket(0x08), DiscoveryEvent(methodCode, connectionAddress) {}
+  DiscoveryRemoveEvent() : DiscoveryRemoveEvent(0, "") {}
 };
 
 }  // namespace cb
