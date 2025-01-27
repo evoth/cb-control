@@ -120,7 +120,7 @@ void PTPCamera::startEventThread() {
           pushEvent<DisconnectEvent>();
           break;
         }
-        getEvents();
+        getNewEvents();
       } catch (Exception& e) {
         pushEvent(std::make_unique<ExceptionEvent>(e));
       }

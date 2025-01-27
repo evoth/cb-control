@@ -9,18 +9,12 @@
 
 namespace cb {
 
-class CameraProxy : public Camera, public EventProxy<EventContainer> {
+class CameraProxy : public Camera, public EventManager<CameraEvent> {
  public:
   void connect() override;
   void disconnect() override;
   void capture() override;
   void setProp(CameraProp prop, CameraPropValue value) override;
-
- protected:
-  std::string id;
-
- private:
-  void sendEvent(std::unique_ptr<EventPacket> event);
 };
 
 class CameraWrapper : public CameraProxy {
@@ -31,32 +25,46 @@ class CameraWrapper : public CameraProxy {
                 int port = 15740)
       : cameraFactory(std::make_unique<PTPCameraFactory>(
             std::make_unique<PTPIPFactory>(clientGuid, clientName, ip, port))) {
-  }
+    onEvent<ConnectEvent>([this]() {
+      if (!camera)
+        camera = cameraFactory->create();
+      if (camera)
+        camera->connect();
+    });
 
-  std::unique_ptr<EventContainer> popEvent() override;
-  void receiveEvent(std::unique_ptr<EventContainer> event) override;
+    onEvent<DisconnectEvent>([this]() {
+      if (camera)
+        camera->disconnect();
+      else
+        pushEvent<DisconnectEvent>();
+    });
+
+    onEvent<CaptureEvent>([this]() {
+      if (!camera)
+        pushEvent<DisconnectEvent>();
+      camera->capture();
+    });
+
+    onEvent<SetPropEvent>(
+        [this](const std::unique_ptr<SetPropEvent>& setPropEvent) {
+          if (!camera)
+            pushEvent<DisconnectEvent>();
+          const CameraProp prop =
+              static_cast<CameraProp>(setPropEvent->propCode);
+          const CameraPropValue value(setPropEvent->valueNumerator,
+                                      setPropEvent->valueDenominator);
+          camera->setProp(prop, value);
+        });
+  };
+
+  std::unique_ptr<CameraEvent> popEvent() override;
 
  protected:
-  void getEvents() override;
+  void getNewEvents() override;
 
  private:
   std::unique_ptr<Factory<EventCamera>> cameraFactory;
   std::unique_ptr<EventCamera> camera;
-
-  std::unique_ptr<EventContainer> eventContainer;
-
-  // bool isCapturing;
-  std::map<CameraProp, CameraPropValue> props;
-
-  void pushCameraEvent(std::unique_ptr<EventPacket> event);
-
-  template <typename T, typename... Args>
-    requires std::derived_from<T, EventPacket>
-  void pushCameraEvent(Args&&... args) {
-    pushCameraEvent(std::make_unique<T>(std::forward<Args>(args)...));
-  }
-
-  void handleEvent(const Buffer& event);
 };
 
 }  // namespace cb

@@ -8,47 +8,37 @@
 int main() {
   using namespace cb;
 
-  const std::array<uint8_t, 16> guid = {'C', 'a', 'p', 't', 'u', 'r', 'e', 'B',
-                                        'e', 'a', 'm', 'P', 'T', 'P', 'I', 'P'};
-
   SSDPDiscovery ssdp(
       std::make_unique<UDPSocketImpl>(), std::make_unique<UDPSocketImpl>(),
       std::make_unique<TCPSocketImpl>(),
-      {"urn:schemas-canon-com:service:ICPO-SmartPhoneEOSSystemService:1"}, guid,
+      {"urn:schemas-canon-com:service:ICPO-SmartPhoneEOSSystemService:1"},
+      {'C', 'a', 'p', 't', 'u', 'r', 'e', 'B', 'e', 'a', 'm', 'P', 'T', 'P',
+       'I', 'P'},
       "CaptureBeam");
 
-  std::unique_ptr<CameraProxy> camera;
+  ssdp.onEvent<DiscoveryAddEvent>(
+      [&ssdp](const std::unique_ptr<DiscoveryAddEvent>& addEvent) {
+        auto camera = ssdp.createCamera(addEvent);
 
-  for (int i = 0; i < 2; i++) {
-    while (!camera) {
-      std::unique_ptr<EventContainer> container = ssdp.popEvent();
-      if (!container)
-        continue;
-      for (const Buffer& event : container->events) {
-        if (auto addEvent = EventPacket::unpackAs<DiscoveryAddEvent>(event)) {
-          camera = ssdp.createCamera(std::move(addEvent));
-        }
-      }
-    }
+        Logger::log("Connecting to camera...");
+        camera->connect();
+        std::this_thread::sleep_for(std::chrono::seconds(5));
 
-    Logger::log("Connecting to camera...");
-    camera->connect();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+        camera->setProp(CameraProp::Aperture, {56, 10});
+        camera->setProp(CameraProp::ShutterSpeed, {1, 100});
+        camera->setProp(CameraProp::ISO, {400, 1});
+        camera->capture();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    camera->setProp(CameraProp::Aperture, {56, 10});
-    camera->setProp(CameraProp::ShutterSpeed, {1, 100});
-    camera->setProp(CameraProp::ISO, {400, 1});
-    camera->capture();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+        camera->setProp(CameraProp::Aperture, {80, 10});
+        camera->setProp(CameraProp::ShutterSpeed, {1, 1000});
+        camera->setProp(CameraProp::ISO, {100, 1});
+        camera->capture();
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+      });
 
-    camera->setProp(CameraProp::Aperture, {80, 10});
-    camera->setProp(CameraProp::ShutterSpeed, {1, 1000});
-    camera->setProp(CameraProp::ISO, {100, 1});
-    camera->capture();
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    camera.reset();
-  }
+  while (true)
+    ssdp.dispatchEvent();
 
   return 0;
 }

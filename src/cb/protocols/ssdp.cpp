@@ -6,17 +6,17 @@
 namespace cb {
 
 std::unique_ptr<CameraProxy> SSDPDiscovery::createCamera(
-    std::unique_ptr<DiscoveryAddEvent> addEvent) {
+    const std::unique_ptr<DiscoveryAddEvent>& addEvent) {
   return std::make_unique<CameraWrapper>(clientGuid, clientName,
                                          addEvent->connectionAddress);
 }
 
 std::unique_ptr<EventContainer> SSDPDiscovery::popEvent() {
-  getEvents();
-  return EventEmitter<EventContainer>::popEvent();
+  getNewEvents();
+  return EventManager<EventContainer>::popEvent();
 }
 
-void SSDPDiscovery::getEvents() {
+void SSDPDiscovery::getNewEvents() {
   // Listen for NOTIFY messages on multicast socket
   HTTPRequest request;
   while (request.recv(*multicastSocket, 0)) {
@@ -69,6 +69,8 @@ void SSDPDiscovery::getEvents() {
   }
 }
 
+// TODO: Send DiscoveryAddEvent regardless of whether advertisement is new
+// (decide whether to request XML every time or cache it)
 void SSDPDiscovery::processAdvertisement(HTTPMessage& message,
                                          std::string ip,
                                          std::string serviceName) {

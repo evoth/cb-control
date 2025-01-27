@@ -10,13 +10,20 @@ enum class DiscoveryMethod {
   SSDP,
 };
 
-class DiscoveryService : public EventEmitter<EventContainer> {
+class DiscoveryService : public EventManager<EventContainer> {
  public:
   DiscoveryService(DiscoveryMethod discoveryMethod)
-      : discoveryMethod(discoveryMethod) {}
+      : discoveryMethod(discoveryMethod) {
+    onEvent<EventContainer>(
+        [this](const std::unique_ptr<EventContainer>& container) {
+          for (const Buffer& event : container->events) {
+            dispatchEvent(event);
+          }
+        });
+  }
 
   virtual std::unique_ptr<CameraProxy> createCamera(
-      std::unique_ptr<DiscoveryAddEvent> addEvent) = 0;
+      const std::unique_ptr<DiscoveryAddEvent>& addEvent) = 0;
 
  protected:
   std::string createId(std::string connectionAddress) {

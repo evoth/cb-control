@@ -53,7 +53,7 @@ class Camera {
   virtual void setProp(CameraProp prop, CameraPropValue value) = 0;
 };
 
-class EventCamera : public Camera, public EventEmitter<EventPacket> {};
+class EventCamera : public Camera, public EventManager<CameraEvent> {};
 
 }  // namespace cb
 

@@ -7,14 +7,14 @@
 
 namespace cb {
 
-class CameraManager : public EventProxy<EventContainer> {
+class CameraManager : public EventManager<EventContainer> {
  public:
   std::unique_ptr<EventContainer> popEvent() override;
 
-  void receiveEvent(std::unique_ptr<EventContainer> event) override;
+  // void receiveEvent(std::unique_ptr<EventContainer> event) override;
 
  protected:
-  void getEvents() override;
+  void getNewEvents() override;
 
  private:
   std::map<std::string, std::unique_ptr<CameraProxy>> cameras;
@@ -24,3 +24,18 @@ class CameraManager : public EventProxy<EventContainer> {
 }  // namespace cb
 
 #endif
+
+// onEvent<EventContainer>(
+//         [this](const std::unique_ptr<EventContainer>& container) {
+//           if (container->id != id)
+//             return;
+
+//           for (const Buffer& event : container->events) {
+//             try {
+//               getNewEvents();
+//               dispatchEvent(event);
+//             } catch (Exception& e) {
+//               pushCameraEvent(std::make_unique<ExceptionEvent>(e));
+//             }
+//           }
+//         });
