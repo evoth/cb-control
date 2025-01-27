@@ -9,7 +9,7 @@
 
 namespace cb {
 
-class CameraProxy : public Camera, public EventManager<CameraEvent> {
+class CameraProxy : public Camera {
  public:
   void connect() override;
   void disconnect() override;
@@ -63,8 +63,8 @@ class CameraWrapper : public CameraProxy {
   void getNewEvents() override;
 
  private:
-  std::unique_ptr<Factory<EventCamera>> cameraFactory;
-  std::unique_ptr<EventCamera> camera;
+  std::unique_ptr<Factory<Camera>> cameraFactory;
+  std::unique_ptr<Camera> camera;
 };
 
 }  // namespace cb

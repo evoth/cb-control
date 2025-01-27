@@ -89,7 +89,7 @@ class PTP {
                                     std::vector<uint8_t> data = {});
 };
 
-class PTPCamera : protected PTP, public EventCamera {
+class PTPCamera : protected PTP, public Camera {
  public:
   PTPCamera(PTP&& ptp, VendorExtensionId vendorExtensionId)
       : PTP(std::move(ptp)), vendorExtensionId(vendorExtensionId) {}

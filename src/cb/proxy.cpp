@@ -29,7 +29,7 @@ void CameraWrapper::getNewEvents() {
 
 std::unique_ptr<CameraEvent> CameraWrapper::popEvent() {
   getNewEvents();
-  return EventManager<CameraEvent>::popEvent();
+  return Camera::popEvent();
 }
 
 }  // namespace cb

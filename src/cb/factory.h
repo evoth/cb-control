@@ -14,12 +14,12 @@ class Factory {
   virtual std::unique_ptr<T> create() const = 0;
 };
 
-class PTPCameraFactory : public Factory<EventCamera> {
+class PTPCameraFactory : public Factory<Camera> {
  public:
   PTPCameraFactory(std::unique_ptr<Factory<PTPTransport>> transportFactory)
       : transportFactory(std::move(transportFactory)) {}
 
-  std::unique_ptr<EventCamera> create() const override;
+  std::unique_ptr<Camera> create() const override;
 
  private:
   std::unique_ptr<Factory<PTPTransport>> transportFactory;

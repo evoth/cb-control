@@ -42,8 +42,11 @@ enum class CameraProp {
   EVComp,
 };
 
-class Camera {
+class Camera : public EventManager<CameraEvent> {
  public:
+  Camera() {
+    onException([this](const Exception& e) { pushEvent<ExceptionEvent>(e); });
+  }
   virtual ~Camera() = default;
 
   virtual void connect() = 0;
@@ -51,13 +54,6 @@ class Camera {
 
   virtual void capture() = 0;
   virtual void setProp(CameraProp prop, CameraPropValue value) = 0;
-};
-
-class EventCamera : public Camera, public EventManager<CameraEvent> {
- public:
-  EventCamera() {
-    onException([this](const Exception& e) { pushEvent<ExceptionEvent>(e); });
-  }
 };
 
 }  // namespace cb
