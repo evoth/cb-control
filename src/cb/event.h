@@ -30,6 +30,40 @@ class EventPacket : public TCPPacket {
   }
 };
 
+template <typename T>
+  requires std::derived_from<T, EventPacket>
+class EventEmitter {
+ public:
+  virtual ~EventEmitter() = default;
+
+  void pushEvent(std::unique_ptr<T> event) {
+    std::lock_guard lock(eventsMutex);
+    events.push(std::move(event));
+  }
+
+  template <typename U, typename... Args>
+    requires std::derived_from<U, T>
+  void pushEvent(Args&&... args) {
+    pushEvent(std::make_unique<U>(std::forward<Args>(args)...));
+  }
+
+  virtual std::unique_ptr<T> popEvent() {
+    std::lock_guard lock(eventsMutex);
+    if (events.empty())
+      return nullptr;
+    std::unique_ptr<T> result = std::move(events.front());
+    events.pop();
+    return result;
+  }
+
+ protected:
+  virtual void getNewEvents() = 0;
+
+ private:
+  std::mutex eventsMutex;
+  std::queue<std::unique_ptr<T>> events;
+};
+
 template <typename T, typename U = void>
 using EventHandlerCallback = std::function<U(const T&)>;
 
@@ -59,31 +93,9 @@ class EventHandler {
   std::optional<int> times;
 };
 
-template <typename T>
-  requires std::derived_from<T, EventPacket>
-class EventManager {
+class EventDispatcher {
  public:
-  virtual ~EventManager() = default;
-
-  void pushEvent(std::unique_ptr<T> event) {
-    std::lock_guard lock(eventsMutex);
-    events.push(std::move(event));
-  }
-
-  template <typename U, typename... Args>
-    requires std::derived_from<U, T>
-  void pushEvent(Args&&... args) {
-    pushEvent(std::make_unique<U>(std::forward<Args>(args)...));
-  }
-
-  virtual std::unique_ptr<T> popEvent() {
-    std::lock_guard lock(eventsMutex);
-    if (events.empty())
-      return nullptr;
-    std::unique_ptr<T> result = std::move(events.front());
-    events.pop();
-    return result;
-  }
+  virtual ~EventDispatcher() = default;
 
   template <typename U>
     requires std::derived_from<U, EventPacket>
@@ -148,8 +160,6 @@ class EventManager {
     dispatchEvent(event->pack());
   }
 
-  void dispatchEvent() { dispatchEvent(popEvent()); }
-
   void dispatchException(const Exception& e) {
     if (exceptionHandlers.empty())
       throw e;
@@ -164,13 +174,7 @@ class EventManager {
     }
   }
 
- protected:
-  virtual void getNewEvents() = 0;
-
  private:
-  std::mutex eventsMutex;
-  std::queue<std::unique_ptr<T>> events;
-
   // TODO: Somehow merge event/exception handlers?
   int handlerIdCounter = 0;
   std::map<int, EventHandler<Buffer>> eventHandlers;

@@ -10,7 +10,8 @@ enum class DiscoveryMethod {
   SSDP,
 };
 
-class DiscoveryService : public EventManager<EventContainer> {
+class DiscoveryService : public EventEmitter<EventContainer>,
+                         public EventDispatcher {
  public:
   DiscoveryService(DiscoveryMethod discoveryMethod)
       : discoveryMethod(discoveryMethod) {

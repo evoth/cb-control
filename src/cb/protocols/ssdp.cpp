@@ -13,7 +13,7 @@ std::unique_ptr<CameraProxy> SSDPDiscovery::createCamera(
 
 std::unique_ptr<EventContainer> SSDPDiscovery::popEvent() {
   getNewEvents();
-  return EventManager<EventContainer>::popEvent();
+  return EventEmitter<EventContainer>::popEvent();
 }
 
 void SSDPDiscovery::getNewEvents() {

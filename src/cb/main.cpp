@@ -52,7 +52,7 @@ int main() {
   int handlerId = ssdp.addEventHandler<DiscoveryAddEvent>(cameraDemo, 2);
 
   while (ssdp.containsHandler(handlerId))
-    ssdp.dispatchEvent();
+    ssdp.dispatchEvent(ssdp.popEvent());
 
   return 0;
 }

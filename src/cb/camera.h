@@ -42,7 +42,7 @@ enum class CameraProp {
   EVComp,
 };
 
-class Camera : public EventManager<CameraEvent> {
+class Camera : public EventEmitter<CameraEvent>, public EventDispatcher {
  public:
   Camera() {
     addExceptionHandler(
