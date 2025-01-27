@@ -45,7 +45,8 @@ enum class CameraProp {
 class Camera : public EventManager<CameraEvent> {
  public:
   Camera() {
-    onException([this](const Exception& e) { pushEvent<ExceptionEvent>(e); });
+    addExceptionHandler(
+        [this](const Exception& e) { pushEvent<ExceptionEvent>(e); });
   }
   virtual ~Camera() = default;
 

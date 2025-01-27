@@ -14,7 +14,7 @@ class DiscoveryService : public EventManager<EventContainer> {
  public:
   DiscoveryService(DiscoveryMethod discoveryMethod)
       : discoveryMethod(discoveryMethod) {
-    onEvent<EventContainer>(
+    addEventHandler<EventContainer>(
         [this](const std::unique_ptr<EventContainer>& container) {
           for (const Buffer& event : container->events) {
             dispatchEvent(event);

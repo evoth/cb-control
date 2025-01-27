@@ -16,17 +16,17 @@ int main() {
        'I', 'P'},
       "CaptureBeam");
 
-  ssdp.onException([](const Exception& exception) {
+  ssdp.addExceptionHandler([](const Exception& exception) {
     Logger::log("SSDP exception (context=%d, type=%d)",
                 static_cast<int>(exception.context),
                 static_cast<int>(exception.type));
   });
 
-  ssdp.onEvent<DiscoveryAddEvent>(
+  auto cameraDemo =
       [&ssdp](const std::unique_ptr<DiscoveryAddEvent>& addEvent) {
         auto camera = ssdp.createCamera(addEvent);
 
-        camera->onException([](const Exception& exception) {
+        camera->addExceptionHandler([](const Exception& exception) {
           Logger::log("Camera exception (context=%d, type=%d)",
                       static_cast<int>(exception.context),
                       static_cast<int>(exception.type));
@@ -47,9 +47,11 @@ int main() {
         camera->setProp(CameraProp::ISO, {100, 1});
         camera->capture();
         std::this_thread::sleep_for(std::chrono::seconds(5));
-      });
+      };
 
-  while (true)
+  int handlerId = ssdp.addEventHandler<DiscoveryAddEvent>(cameraDemo, 2);
+
+  while (ssdp.containsHandler(handlerId))
     ssdp.dispatchEvent();
 
   return 0;

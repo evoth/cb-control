@@ -5,11 +5,10 @@
 #include <cb/protocols/tcp.h>
 
 #include <functional>
+#include <map>
 #include <mutex>
 #include <queue>
 #include <utility>
-
-#include <cb/logger.h>
 
 namespace cb {
 
@@ -29,6 +28,35 @@ class EventPacket : public TCPPacket {
   static std::unique_ptr<T> unpackAs(const Buffer& buffer) {
     return Packet::unpackAs<EventPacket, T>(buffer);
   }
+};
+
+template <typename T, typename U = void>
+using EventHandlerCallback = std::function<U(const T&)>;
+
+template <typename U>
+class EventHandler {
+ public:
+  EventHandler(EventHandlerCallback<U, bool> callback, std::optional<int> times)
+      : callback(callback), times(times) {}
+  EventHandler(EventHandlerCallback<U, void> callback, std::optional<int> times)
+      : callback([callback](const U& event) {
+          callback(event);
+          return true;
+        }),
+        times(times) {}
+
+  void call(const U& event) {
+    if (!isActive())
+      return;
+    if (callback(event) && times.has_value())
+      (*times)--;
+  }
+
+  bool isActive() { return !times.has_value() || times.value() > 0; }
+
+ private:
+  EventHandlerCallback<U, bool> callback;
+  std::optional<int> times;
 };
 
 template <typename T>
@@ -58,34 +86,59 @@ class EventManager {
   }
 
   template <typename U>
-  using EventHandler = std::function<void(const U&)>;
-
-  template <typename U>
     requires std::derived_from<U, EventPacket>
-  void onEvent(EventHandler<std::unique_ptr<U>> handler) {
-    eventHandlers.push_back([handler](const Buffer& buffer) {
-      if (auto event = EventPacket::unpackAs<U>(buffer))
-        handler(event);
-    });
+  int addEventHandler(EventHandlerCallback<std::unique_ptr<U>> callback,
+                      std::optional<int> times = std::nullopt) {
+    EventHandlerCallback<Buffer, bool> filterCallback =
+        [callback](const Buffer& buffer) {
+          if (auto event = EventPacket::unpackAs<U>(buffer)) {
+            callback(event);
+            return true;
+          }
+          return false;
+        };
+    eventHandlers.emplace(handlerIdCounter,
+                          EventHandler<Buffer>(filterCallback, times));
+    return handlerIdCounter++;
   }
 
   template <typename U>
     requires std::derived_from<U, EventPacket>
-  void onEvent(std::function<void()> handler) {
-    onEvent<U>([handler](const std::unique_ptr<U>&) { handler(); });
+  int addEventHandler(std::function<void()> callback,
+                      std::optional<int> times = std::nullopt) {
+    return addEventHandler<U>(
+        [callback](const std::unique_ptr<U>&) { callback(); }, times);
   }
 
-  void onException(EventHandler<Exception> handler) {
-    exceptionHandlers.push_back(handler);
+  int addExceptionHandler(EventHandlerCallback<Exception> callback,
+                          std::optional<int> times = std::nullopt) {
+    exceptionHandlers.emplace(handlerIdCounter,
+                              EventHandler<Exception>(callback, times));
+    return handlerIdCounter++;
+  }
+
+  bool containsHandler(int handlerId) {
+    return eventHandlers.contains(handlerId) ||
+           exceptionHandlers.contains(handlerId);
+  }
+
+  void removeHandler(int handlerId) {
+    eventHandlers.erase(handlerId);
+    exceptionHandlers.erase(handlerId);
   }
 
   void dispatchEvent(const Buffer& buffer) {
-    for (const auto& handler : eventHandlers) {
+    for (auto it = eventHandlers.begin(); it != eventHandlers.end();) {
       try {
-        handler(buffer);
+        it->second.call(buffer);
       } catch (const Exception& e) {
         dispatchException(e);
       }
+
+      if (it->second.isActive())
+        it++;
+      else
+        it = eventHandlers.erase(it);
     }
   }
 
@@ -101,8 +154,13 @@ class EventManager {
     if (exceptionHandlers.empty())
       throw e;
 
-    for (const auto& handler : exceptionHandlers) {
-      handler(e);
+    for (auto it = exceptionHandlers.begin(); it != exceptionHandlers.end();) {
+      it->second.call(e);
+
+      if (it->second.isActive())
+        it++;
+      else
+        it = exceptionHandlers.erase(it);
     }
   }
 
@@ -113,8 +171,10 @@ class EventManager {
   std::mutex eventsMutex;
   std::queue<std::unique_ptr<T>> events;
 
-  std::vector<EventHandler<Buffer>> eventHandlers;
-  std::vector<EventHandler<Exception>> exceptionHandlers;
+  // TODO: Somehow merge event/exception handlers?
+  int handlerIdCounter = 0;
+  std::map<int, EventHandler<Buffer>> eventHandlers;
+  std::map<int, EventHandler<Exception>> exceptionHandlers;
 };
 
 class EventContainer : public EventPacket {

@@ -2,7 +2,6 @@
 #define CB_CONTROL_SSDP_H
 
 #include <cb/discovery.h>
-#include <cb/logger.h>
 #include <cb/protocols/http.h>
 
 #include <chrono>

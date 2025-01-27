@@ -5,8 +5,6 @@
 #include <cb/event.h>
 #include <cb/factory.h>
 
-#include <map>
-
 namespace cb {
 
 class CameraProxy : public Camera {
@@ -25,35 +23,38 @@ class CameraWrapper : public CameraProxy {
                 int port = 15740)
       : cameraFactory(std::make_unique<PTPCameraFactory>(
             std::make_unique<PTPIPFactory>(clientGuid, clientName, ip, port))) {
-    onEvent<ConnectEvent>([this]() {
+    addEventHandler<ConnectEvent>([this]() {
       if (!camera)
         camera = cameraFactory->create();
       if (camera)
         camera->connect();
     });
 
-    onEvent<DisconnectEvent>([this]() {
+    addEventHandler<DisconnectEvent>([this]() {
       if (camera)
         camera->disconnect();
       else
         pushEvent<DisconnectEvent>();
     });
 
-    onEvent<CaptureEvent>([this]() {
-      if (!camera)
+    addEventHandler<CaptureEvent>([this]() {
+      if (camera)
+        camera->capture();
+      else
         pushEvent<DisconnectEvent>();
-      camera->capture();
     });
 
-    onEvent<SetPropEvent>(
+    addEventHandler<SetPropEvent>(
         [this](const std::unique_ptr<SetPropEvent>& setPropEvent) {
-          if (!camera)
+          if (camera) {
+            const CameraProp prop =
+                static_cast<CameraProp>(setPropEvent->propCode);
+            const CameraPropValue value(setPropEvent->valueNumerator,
+                                        setPropEvent->valueDenominator);
+            camera->setProp(prop, value);
+          } else {
             pushEvent<DisconnectEvent>();
-          const CameraProp prop =
-              static_cast<CameraProp>(setPropEvent->propCode);
-          const CameraPropValue value(setPropEvent->valueNumerator,
-                                      setPropEvent->valueDenominator);
-          camera->setProp(prop, value);
+          }
         });
   };
 
